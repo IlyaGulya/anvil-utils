@@ -1,0 +1,23 @@
+[versions]
+kotlin = "1.9.22"
+anvil = "2.4.9"
+dagger = "2.50"
+
+[libraries]
+
+anvil-compiler-api = { module = "com.squareup.anvil:compiler-api", version.ref = "anvil" }
+anvil-compiler-utils = { module = "com.squareup.anvil:compiler-utils", version.ref = "anvil" }
+kotlinpoet = "com.squareup:kotlinpoet:1.16.0"
+google-autoservice-annotations = "com.google.auto.service:auto-service-annotations:1.1.1"
+google-autoservice-compiler = "com.google.auto.service:auto-service:1.1.1"
+
+dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }
+dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }
+
+google-truth = "com.google.truth:truth:1.4.2"
+junit = "junit:junit:4.13.2"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+anvil = { id = "com.squareup.anvil", version.ref = "anvil" }

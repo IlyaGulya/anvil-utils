@@ -1,0 +1,26 @@
+.gradle
+build/
+
+**/build/reports
+**/build/classes
+**/build/libs
+**/build/tmp
+**/build/generated
+**/build/intermediates
+**/build/outputs
+**/build/.transforms
+**/build/kotlin
+**/build/kotlinToolingMetadata
+**/build/anvil
+**/build/*.compiler.options
+**/build/kotlin-dsl
+**/build/generated-sources
+**/build/kspCaches
+**/build/pluginDescriptors
+**/build/resources
+
+
+.idea
+
+### Mac OS ###
+.DS_Store
