@@ -142,7 +142,8 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
 
             assertThat(messages).contains(
-                "Primary constructor for @ContributesAssistedFactory must be annotated with @AssistedInject"
+                "Class 'DefaultTestApi' annotated with @ContributesAssistedFactory must have its " +
+                "primary constructor annotated with @AssistedInject"
             )
         }
     }
@@ -178,7 +179,8 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
 
             assertThat(messages).contains(
-                "@ContributesAssistedFactory-annotated class must have a single primary constructor"
+                "Class 'DefaultTestApi' annotated with @ContributesAssistedFactory must have " +
+                "a single primary constructor"
             )
         }
     }
@@ -217,7 +219,8 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
 
             assertThat(messages).contains(
-                "The bound type for @ContributesAssistedFactory must have a single abstract method"
+                "The bound type 'TestApiFactory' for @ContributesAssistedFactory " +
+                "must have a single abstract method"
             )
         }
     }
@@ -253,7 +256,8 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
 
             assertThat(messages).contains(
-                "The assisted factory method parameters must match the @Assisted parameters in the primary constructor"
+                "The assisted factory method parameters in 'TestApiFactory.create2' must match " +
+                "the @Assisted parameters in the primary constructor of 'DefaultTestApi'"
             )
         }
     }
@@ -288,8 +292,9 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
 
             assertThat(messages).contains(
-                "The @Assisted annotation value for 'bebe2' must match the value on the " +
-                        "corresponding factory method parameter"
+                "The @Assisted annotation value for parameter 'bebe2' in the primary constructor " +
+                "of 'DefaultTestApi' must match the value on the corresponding parameter in " +
+                "the factory method 'TestApiFactory.create'"
             )
         }
     }
@@ -377,7 +382,8 @@ class ContributesAssistedFactoryCodeGeneratorTest {
         ) {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
             assertThat(messages).contains(
-                "The bound type for @ContributesAssistedFactory must be an abstract class or interface"
+                "The bound type 'TestApiFactory' for @ContributesAssistedFactory on class 'DefaultTestApi' " +
+                "must be an abstract class or interface"
             )
         }
     }
@@ -406,7 +412,9 @@ class ContributesAssistedFactoryCodeGeneratorTest {
         ) {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
             assertThat(messages).contains(
-                "The assisted parameter 'param' type kotlin.String must match the factory method parameter type kotlin.Int"
+                "The type of assisted parameter 'param' in the primary constructor of 'DefaultTestApi' " +
+                "must match the type of the corresponding parameter in the factory method 'TestApiFactory.create'. " +
+                "Expected: kotlin.Int, Found: kotlin.String"
             )
         }
     }
