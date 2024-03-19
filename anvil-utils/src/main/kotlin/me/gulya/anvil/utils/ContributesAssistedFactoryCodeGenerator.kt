@@ -50,19 +50,21 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                 .scope()
                 .asClassName()
 
-        val boundType = annotation.boundTypeOrNull()
+        val boundType = annotation.boundTypeOrNull()?.takeIf {
+            it.fqName != Nothing::class.fqName
+        }
         val factoryMethod = boundType?.functions?.singleOrNull { it.isAbstract() }
 
         val primaryConstructor = assistedFactoryClass.constructors.singleOrNull()
 
-        primaryConstructor ?: throw AnvilCompilationExceptionAnnotationReference(
-            annotation,
-            "Class annotated with @ContributesAssistedFactory must have a single primary constructor",
+        primaryConstructor ?: throw AnvilCompilationExceptionClassReference(
+            assistedFactoryClass,
+            "@ContributesAssistedFactory-annotated class must have a single primary constructor",
         )
 
         if (!primaryConstructor.isAnnotatedWith(AssistedInject::class.fqName)) {
-            throw AnvilCompilationExceptionAnnotationReference(
-                annotation,
+            throw AnvilCompilationExceptionFunctionReference(
+                primaryConstructor,
                 "Primary constructor for @ContributesAssistedFactory must be annotated with @AssistedInject",
             )
         }
@@ -70,101 +72,9 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
         val assistedParameters = primaryConstructor.parameters
             .filter { it.isAnnotatedWith(Assisted::class.fqName) }
 
-        val isBoundTypeSpecified = boundType != null && boundType.fqName != Nothing::class.fqName
-
-        if (boundType != null && isBoundTypeSpecified) {
-            if (!boundType.isInterface()) {
-                throw AnvilCompilationExceptionAnnotationReference(
-                    annotation,
-                    "The bound type for @ContributesAssistedFactory must be an interface",
-                )
-            }
-
-            factoryMethod ?: throw AnvilCompilationExceptionAnnotationReference(
-                annotation,
-                "The bound type for @ContributesAssistedFactory must have a single abstract method",
-            )
-
-            val factoryMethodParameters = factoryMethod.parameters
-
-            if (assistedParameters.size != factoryMethodParameters.size) {
-                throw AnvilCompilationExceptionAnnotationReference(
-                    annotation,
-                    "Mismatch in number of parameters: the constructor of the annotated class with @ContributesAssistedFactory has ${assistedParameters.size} @Assisted parameters, " +
-                            "but the factory method in ${boundType.asTypeName()} expects ${factoryMethodParameters.size} parameters. " +
-                            "Please ensure they have the same number of parameters."
-                )
-            }
-
-            assistedParameters.forEachIndexed { index, assistedParameter ->
-                val factoryParameter = factoryMethodParameters[index]
-                if (assistedParameter.type() != factoryParameter.type()) {
-                    throw AnvilCompilationExceptionAnnotationReference(
-                        annotation,
-                        """Type mismatch for parameter at position ${index + 1}: the constructor of the annotated class with @ContributesAssistedFactory has a parameter of type ${
-                            assistedParameter.type().asTypeName()
-                        }, """ +
-                                "but the corresponding parameter in the factory method of ${boundType.asTypeName()} is of type ${
-                                    factoryParameter.type().asTypeName()
-                                }. " +
-                                "Please ensure the parameter types match."
-                    )
-                }
-            }
-
-
-//
-//
-//            val missingAssistedParams = factoryMethod.parameters
-//                .filter { it.name !in assistedParamsByNames }
-//                .map { it.name }
-//
-//            val excessAssistedParams = assistedParameters
-//                .filter { it.name !in boundFactoryParamsByNames }
-//                .map { it.name }
-//
-//            // TODO: Check assignability instead of just type equality
-//            val incompatiblyTypedParams = factoryMethod.parameters
-//                .filter { it.name in assistedParamsByNames }
-//                .filter { assistedParamsByNames.getValue(it.name).type() != it.type() }
-//
-//            val formattedMissingParams =
-//                if (missingAssistedParams.isNotEmpty()) {
-//                    "Missing assisted parameters: ${missingAssistedParams.joinToString()}"
-//                } else {
-//                    null
-//                }
-//
-//            val formattedExcessParams =
-//                if (excessAssistedParams.isNotEmpty()) {
-//                    "Excess assisted parameters: ${excessAssistedParams.joinToString()}"
-//                } else {
-//                    null
-//                }
-//
-//            val formattedIncompatiblyTypedParams =
-//                if (incompatiblyTypedParams.isNotEmpty()) {
-//                    incompatiblyTypedParams.joinToString(separator = ". ") { param ->
-//                        "Parameter ${param.name} is of type ${param.type()} in the factory method, but is of type ${assistedParamsByNames.getValue(param.name).type()} in the assisted constructor"
-//                    }
-//                } else {
-//                    null
-//                }
-//
-//            val errorMessages = listOfNotNull(
-//                formattedMissingParams,
-//                formattedExcessParams,
-//                formattedIncompatiblyTypedParams,
-//            )
-//
-//            if (errorMessages.isNotEmpty()) {
-//                throw AnvilCompilationExceptionAnnotationReference(
-//                    annotation,
-//                    errorMessages.joinToString(separator = ". "),
-//                )
-//            }
+        if (boundType != null) {
+            validateBoundType(boundType, assistedParameters, annotation)
         }
-
 
         val functionBuilder =
             if (factoryMethod != null) {
@@ -175,29 +85,43 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                 FunSpec.builder("create")
             }
 
+        val typeBuilder =
+            if (boundType == null) {
+                TypeSpec
+                    .funInterfaceBuilder(factoryClassName)
+                    .addAnnotation(
+                        AnnotationSpec
+                            .builder(ContributesTo::class)
+                            .addClassMember(scope)
+                            .build(),
+                    )
+            } else {
+                val boundTypeName = boundType.asTypeName()
+                val builder =
+                    if (boundType.isInterface()) {
+                        TypeSpec
+                            .interfaceBuilder(factoryClassName)
+                            .addSuperinterface(boundTypeName)
+                    } else {
+                        TypeSpec
+                            .classBuilder(factoryClassName)
+                            .addModifiers(KModifier.ABSTRACT)
+                            .superclass(boundTypeName)
+                    }
+
+                builder
+                    .addAnnotation(
+                        AnnotationSpec
+                            .builder(ContributesBinding::class)
+                            .addClassMember(scope)
+                            .addClassMember(boundTypeName)
+                            .build(),
+                    )
+            }
+
         val content = FileSpec.buildFile(generatedPackage, factoryClassName) {
             addType(
-                TypeSpec.funInterfaceBuilder(factoryClassName)
-                    .apply {
-                        if (boundType != null && isBoundTypeSpecified) {
-                            val boundTypeName = boundType.asTypeName()
-                            addSuperinterface(boundTypeName)
-                            addAnnotation(
-                                AnnotationSpec
-                                    .builder(ContributesBinding::class)
-                                    .addClassMember(scope)
-                                    .addClassMember(boundTypeName)
-                                    .build(),
-                            )
-                        } else {
-                            addAnnotation(
-                                AnnotationSpec
-                                    .builder(ContributesTo::class)
-                                    .addClassMember(scope)
-                                    .build(),
-                            )
-                        }
-                    }
+                typeBuilder
                     .addAnnotation(AssistedFactory::class)
                     .addFunction(
                         functionBuilder
@@ -224,6 +148,56 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
         return createGeneratedFile(codeGenDir, generatedPackage, factoryClassName, content)
     }
 
+    private fun validateBoundType(
+        boundType: ClassReference,
+        assistedParameters: List<ParameterReference>,
+        annotation: AnnotationReference,
+    ) {
+        if (!boundType.isAbstract() && !boundType.isInterface()) {
+            throw AnvilCompilationExceptionAnnotationReference(
+                annotation,
+                "The bound type for @ContributesAssistedFactory must be an abstract class or interface",
+            )
+        }
+
+        val factoryMethod = boundType.functions.singleOrNull { it.isAbstract() }
+
+        factoryMethod ?: throw AnvilCompilationExceptionClassReference(
+            boundType,
+            "The bound type for @ContributesAssistedFactory must have a single abstract method",
+        )
+
+        val factoryMethodParameters = factoryMethod.parameters
+
+        if (assistedParameters.size != factoryMethodParameters.size) {
+            throw AnvilCompilationExceptionFunctionReference(
+                factoryMethod,
+                "The assisted factory method parameters must match the @Assisted parameters " +
+                        "in the primary constructor",
+            )
+        }
+
+        assistedParameters.forEachIndexed { index, assistedParameter ->
+            val factoryParameter = factoryMethodParameters[index]
+            if (assistedParameter.type().asTypeName() != factoryParameter.type().asTypeName()) {
+                throw AnvilCompilationExceptionParameterReference(
+                    assistedParameter,
+                    "The assisted parameter '${assistedParameter.name}' type ${
+                        assistedParameter.type().asTypeName()
+                    } " +
+                            "must match the factory method parameter type ${factoryParameter.type().asTypeName()}",
+                )
+            }
+            if (assistedParameter.assistedValue() != factoryParameter.assistedValue()) {
+                throw AnvilCompilationExceptionParameterReference(
+                    assistedParameter,
+                    "The @Assisted annotation value for '${assistedParameter.name}' must match " +
+                            "the value on the corresponding factory method parameter",
+                )
+            }
+        }
+    }
+
     private fun AnnotationSpec.Builder.addClassMember(
         member: TypeName,
     ): AnnotationSpec.Builder {
@@ -246,9 +220,13 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
 
     private fun ParameterReference.assistedValue(): String? {
         return annotations
-            .single { it.fqName == Assisted::class.fqName }
-            .argumentAt("value", 0)
+            .singleOrNull { it.fqName == Assisted::class.fqName }
+            ?.argumentAt("value", 0)
             ?.value<String>()
             ?.takeIf { it.isNotBlank() }
+    }
+
+    private fun TypeReference.isAbstract(): Boolean {
+        return asClassReference().isAbstract()
     }
 }
