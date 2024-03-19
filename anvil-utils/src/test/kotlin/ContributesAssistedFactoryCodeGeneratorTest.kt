@@ -1,6 +1,5 @@
 import com.google.common.truth.Truth.assertThat
 import com.squareup.anvil.annotations.ContributesBinding
-import com.squareup.anvil.annotations.ContributesTo
 import com.squareup.anvil.compiler.internal.testing.compileAnvil
 import com.tschuchort.compiletesting.KotlinCompilation.ExitCode.COMPILATION_ERROR
 import com.tschuchort.compiletesting.KotlinCompilation.ExitCode.OK
@@ -67,54 +66,6 @@ class ContributesAssistedFactoryCodeGeneratorTest {
     }
 
     @Test
-    fun `an assisted factory without binding is generated`() {
-        compileAnvil(
-            """
-            package com.test
-
-            import dagger.assisted.Assisted
-            import dagger.assisted.AssistedInject
-            import me.gulya.anvil.utils.ContributesAssistedFactory
-
-            interface TestApi
-
-            interface TestApiFactory {
-                fun create(
-                    bebe: String,
-                    @Assisted("test") bebe2: String,
-                ): TestApi
-            }
-
-            @ContributesAssistedFactory(Any::class)
-            class DefaultTestApi @AssistedInject constructor(
-                @Assisted private val bebe: String,
-                @Assisted("test") private val bebe2: String,
-            ) : TestApi
-        """,
-        ) {
-            assertThat(exitCode).isEqualTo(OK)
-
-            val clazz = classLoader.loadClass("com.test.DefaultTestApi_AssistedFactory")
-
-            assertThat(clazz.interfaces).isEmpty()
-
-            val contributesToAnnotation = clazz.requireAnnotation<ContributesTo>()
-            assertThat(contributesToAnnotation.scope).isEqualTo(Any::class)
-
-            val factoryMethod = clazz.declaredMethods.single()
-
-            assertThat(factoryMethod.returnType).isEqualTo(classLoader.loadClass("com.test.DefaultTestApi"))
-            val firstParameter = factoryMethod.parameters[0]
-            assertThat(firstParameter.annotations).isEmpty()
-
-            val secondParameter = factoryMethod.parameters[1]
-            val assisted = secondParameter.requireAnnotation<Assisted>()
-
-            assertThat(assisted.value).isEqualTo("test")
-        }
-    }
-
-    @Test
     fun `should fail on primary constructor not annotated with @AssistedInject`() {
         compileAnvil(
             """
@@ -132,7 +83,7 @@ class ContributesAssistedFactoryCodeGeneratorTest {
                 ): TestApi
             }
 
-            @ContributesAssistedFactory(Any::class)
+            @ContributesAssistedFactory(Any::class, TestApiFactory::class)
             class DefaultTestApi constructor(
                 @Assisted private val bebe: String,
                 @Assisted("test") private val bebe2: String,
@@ -143,7 +94,7 @@ class ContributesAssistedFactoryCodeGeneratorTest {
 
             assertThat(messages).contains(
                 "Class 'DefaultTestApi' annotated with @ContributesAssistedFactory must have its " +
-                "primary constructor annotated with @AssistedInject"
+                        "primary constructor annotated with @AssistedInject"
             )
         }
     }
@@ -167,7 +118,7 @@ class ContributesAssistedFactoryCodeGeneratorTest {
                 ): TestApi
             }
 
-            @ContributesAssistedFactory(Any::class)
+            @ContributesAssistedFactory(Any::class, TestApiFactory::class)
             class DefaultTestApi @AssistedInject constructor(
                 @Assisted private val bebe: String,
                 @Assisted("test") private val bebe2: String,
@@ -180,7 +131,7 @@ class ContributesAssistedFactoryCodeGeneratorTest {
 
             assertThat(messages).contains(
                 "Class 'DefaultTestApi' annotated with @ContributesAssistedFactory must have " +
-                "a single primary constructor"
+                        "a single primary constructor"
             )
         }
     }
@@ -220,7 +171,7 @@ class ContributesAssistedFactoryCodeGeneratorTest {
 
             assertThat(messages).contains(
                 "The bound type 'TestApiFactory' for @ContributesAssistedFactory " +
-                "must have a single abstract method"
+                        "must have a single abstract method"
             )
         }
     }
@@ -257,7 +208,7 @@ class ContributesAssistedFactoryCodeGeneratorTest {
 
             assertThat(messages).contains(
                 "The assisted factory method parameters in 'TestApiFactory.create2' must match " +
-                "the @Assisted parameters in the primary constructor of 'DefaultTestApi'"
+                        "the @Assisted parameters in the primary constructor of 'DefaultTestApi'"
             )
         }
     }
@@ -293,72 +244,13 @@ class ContributesAssistedFactoryCodeGeneratorTest {
 
             assertThat(messages).contains(
                 "The @Assisted annotation value for parameter 'bebe2' in the primary constructor " +
-                "of 'DefaultTestApi' must match the value on the corresponding parameter in " +
-                "the factory method 'TestApiFactory.create'"
+                        "of 'DefaultTestApi' must match the value on the corresponding parameter in " +
+                        "the factory method 'TestApiFactory.create'"
             )
         }
     }
 
     // Claude 3 Generated
-
-    @Test
-    fun `an assisted factory with parameter without value is generated`() {
-        compileAnvil(
-            """
-        package com.test
-        
-        import dagger.assisted.Assisted
-        import dagger.assisted.AssistedInject
-        import me.gulya.anvil.utils.ContributesAssistedFactory
-
-        interface TestApi
-        
-        @ContributesAssistedFactory(Any::class)
-        class DefaultTestApi @AssistedInject constructor(
-            @Assisted private val bebe: String,
-        ) : TestApi
-        """,
-        ) {
-            assertThat(exitCode).isEqualTo(OK)
-
-            val clazz = classLoader.loadClass("com.test.DefaultTestApi_AssistedFactory")
-            val factoryMethod = clazz.declaredMethods.single()
-
-            assertThat(factoryMethod.parameters).hasLength(1)
-            val parameter = factoryMethod.parameters[0]
-            assertThat(parameter.annotations).isEmpty()
-        }
-    }
-
-    @Test
-    fun `an assisted factory with primitive types is generated`() {
-        compileAnvil(
-            """
-        package com.test
-        
-        import dagger.assisted.Assisted
-        import dagger.assisted.AssistedInject
-        import me.gulya.anvil.utils.ContributesAssistedFactory
-
-        interface TestApi
-        
-        @ContributesAssistedFactory(Any::class)
-        class DefaultTestApi @AssistedInject constructor(
-            @Assisted private val intParam: Int,
-            @Assisted private val booleanParam: Boolean,
-        ) : TestApi
-        """,
-        ) {
-            assertThat(exitCode).isEqualTo(OK)
-
-            val clazz = classLoader.loadClass("com.test.DefaultTestApi_AssistedFactory")
-            val factoryMethod = clazz.declaredMethods.single()
-
-            assertThat(factoryMethod.parameters).hasLength(2)
-            assertThat(factoryMethod.parameters[0].type).isEqualTo(Int::class.java)
-            assertThat(factoryMethod.parameters[1].type).isEqualTo(Boolean::class.java)
-        }
-    }
 
     @Test
     fun `bound type must be an interface or abstract class`() {
@@ -383,7 +275,7 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
             assertThat(messages).contains(
                 "The bound type 'TestApiFactory' for @ContributesAssistedFactory on class 'DefaultTestApi' " +
-                "must be an abstract class or interface"
+                        "must be an abstract class or interface"
             )
         }
     }
@@ -413,8 +305,8 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
             assertThat(messages).contains(
                 "The type of assisted parameter 'param' in the primary constructor of 'DefaultTestApi' " +
-                "must match the type of the corresponding parameter in the factory method 'TestApiFactory.create'. " +
-                "Expected: kotlin.Int, Found: kotlin.String"
+                        "must match the type of the corresponding parameter in the factory method 'TestApiFactory.create'. " +
+                        "Expected: kotlin.Int, Found: kotlin.String"
             )
         }
     }
@@ -439,7 +331,18 @@ class ContributesAssistedFactoryCodeGeneratorTest {
         class DefaultTestApi @AssistedInject constructor(
             @Assisted private val param: String,
         ) : TestApi
-        """,
+        """
+        ) {
+            assertThat(exitCode).isEqualTo(OK)
+
+            val interfaceFactoryClass = classLoader.loadClass("com.test.DefaultTestApi_AssistedFactory")
+            assertThat(interfaceFactoryClass.isInterface).isTrue()
+        }
+    }
+
+    @Test
+    fun `generated factory is an abstract class if bound type is an abstract class`() {
+        compileAnvil(
             """
         package com.test
         
@@ -460,9 +363,6 @@ class ContributesAssistedFactoryCodeGeneratorTest {
         """
         ) {
             assertThat(exitCode).isEqualTo(OK)
-
-            val interfaceFactoryClass = classLoader.loadClass("com.test.DefaultTestApi_AssistedFactory")
-            assertThat(interfaceFactoryClass.isInterface).isTrue()
 
             val abstractClassFactoryClass = classLoader.loadClass("com.test.DefaultTestApi2_AssistedFactory")
             assertThat(abstractClassFactoryClass.isInterface).isFalse()

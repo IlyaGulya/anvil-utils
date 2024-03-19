@@ -3,43 +3,50 @@ package me.gulya.anvil.utils
 import kotlin.reflect.KClass
 
 /**
- * Annotate a class with this to automatically generate an AssistedFactory for it and
- * contribute it to the specified scope.
+ * Automatically generates an assisted factory for the annotated class and contributes
+ * it to the specified [scope] as binding of the type specified as [boundType].
  *
- * Sample:
+ * [boundType] should be treated the same way as regular Dagger @AssistedFactory.
+ * [boundType] should conform to the same requirements as regular Dagger @AssistedFactory.
+ * [boundType] factory method can have @Assisted parameters.
  *
- *   @ContributesAssistedFactory(AppScope::class, FactoryToBindTo::class)
- *   class SomeClass @AssistedInject constructor(
- *     @Assisted private val someArg: String,
- *     @Assisted("test") private val someArg2: String,
- *   )
+ * Usage example:
  *
- * is equivalent to the following declaration:
+ * ```
+ * abstract class AppScope private constructor()
  *
- *   @ContributesBinding(AppScope::class, FactoryToBindTo::class)
- *   @AssistedFactory
- *   interface SomeClass_AssistedFactory : FactoryToBindTo {
- *     fun create(
- *       someArg: String,
- *       @Assisted("test") someArg2: String,
- *     ): SomeClass
- *   }
+ * interface MyClass
  *
- * If the bound type is not specified, factory will be contributed to the scope as is:
+ * interface MyFactory {
+ *   fun create(
+ *     @Assisted("assisted") assistedParam: Int,
+ *   ): MyClass
+ * }
  *
- *   @ContributesTo(AppScope::class)
- *   @AssistedFactory
- *   interface SomeClass_AssistedFactory {
- *     fun create(
- *       someArg: String,
- *       @Assisted("test") someArg2: String,
- *     ): SomeClass
- *   }
+ * @ContributesAssistedFactory(AppScope::class, MyFactory::class)
+ * class DefaultMyClass @AssistedInject constructor(
+ *   regularParam: String,
+ *   @Assisted("assisted") assistedParam: Int
+ * ) : MyClass
+ * ```
  *
- * The generated code created via the :codegen:anvil module.
+ * The following factory will be generated, implementing MyFactory:
+ *
+ * ```
+ * @ContributesBinding(AppScope::class, MyFactory::class)
+ * @AssistedFactory
+ * interface MyClass_AssistedFactory : MyFactory {
+ *   override fun create(
+ *      @Assisted("assisted") assistedParam: Int,
+ *   ): DefaultMyClass
+ * }
+ * ```
+ *
+ * @param scope The scope to contribute the generated factory to.
+ * @param boundType The type that the generated factory will implement or extend.
  */
 @Target(AnnotationTarget.CLASS)
 annotation class ContributesAssistedFactory(
     val scope: KClass<*>,
-    val boundType: KClass<*> = Nothing::class,
+    val boundType: KClass<*>,
 )

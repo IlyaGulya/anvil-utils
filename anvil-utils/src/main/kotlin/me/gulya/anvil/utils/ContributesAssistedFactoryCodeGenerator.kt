@@ -1,6 +1,5 @@
 import com.google.auto.service.AutoService
 import com.squareup.anvil.annotations.ContributesBinding
-import com.squareup.anvil.annotations.ContributesTo
 import com.squareup.anvil.compiler.api.AnvilContext
 import com.squareup.anvil.compiler.api.CodeGenerator
 import com.squareup.anvil.compiler.api.GeneratedFile
@@ -50,10 +49,15 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                 .scope()
                 .asClassName()
 
-        val boundType = annotation.boundTypeOrNull()?.takeIf {
-            it.fqName != Nothing::class.fqName
-        }
-        val factoryMethod = boundType?.functions?.singleOrNull { it.isAbstract() }
+        val boundType = annotation.boundTypeOrNull()
+
+        boundType ?: throw AnvilCompilationExceptionAnnotationReference(
+            annotation,
+            "The @ContributesAssistedFactory annotation on class '${assistedFactoryClass.shortName}' " +
+                    "must have a 'boundType' parameter",
+        )
+
+        val factoryMethod = boundType.functions.singleOrNull { it.isAbstract() }
 
         val primaryConstructor = assistedFactoryClass.constructors.singleOrNull()
 
@@ -74,14 +78,12 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
         val assistedParameters = primaryConstructor.parameters
             .filter { it.isAnnotatedWith(Assisted::class.fqName) }
 
-        if (boundType != null) {
-            BoundTypeValidator(
-                boundType = boundType,
-                assistedParameters = assistedParameters,
-                annotation = annotation,
-                assistedFactoryClass = assistedFactoryClass
-            ).validate()
-        }
+        BoundTypeValidator(
+            boundType = boundType,
+            assistedParameters = assistedParameters,
+            annotation = annotation,
+            assistedFactoryClass = assistedFactoryClass
+        ).validate()
 
         val functionBuilder =
             if (factoryMethod != null) {
@@ -92,31 +94,22 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                 FunSpec.builder("create")
             }
 
+        val boundTypeName = boundType.asTypeName()
         val typeBuilder =
-            if (boundType == null) {
+            if (boundType.isInterface()) {
                 TypeSpec
-                    .funInterfaceBuilder(factoryClassName)
-                    .addAnnotation(
-                        AnnotationSpec
-                            .builder(ContributesTo::class)
-                            .addClassMember(scope)
-                            .build(),
-                    )
+                    .interfaceBuilder(factoryClassName)
+                    .addSuperinterface(boundTypeName)
             } else {
-                val boundTypeName = boundType.asTypeName()
-                val builder =
-                    if (boundType.isInterface()) {
-                        TypeSpec
-                            .interfaceBuilder(factoryClassName)
-                            .addSuperinterface(boundTypeName)
-                    } else {
-                        TypeSpec
-                            .classBuilder(factoryClassName)
-                            .addModifiers(KModifier.ABSTRACT)
-                            .superclass(boundTypeName)
-                    }
+                TypeSpec
+                    .classBuilder(factoryClassName)
+                    .addModifiers(KModifier.ABSTRACT)
+                    .superclass(boundTypeName)
+            }
 
-                builder
+        val content = FileSpec.buildFile(generatedPackage, factoryClassName) {
+            addType(
+                typeBuilder
                     .addAnnotation(
                         AnnotationSpec
                             .builder(ContributesBinding::class)
@@ -124,11 +117,6 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                             .addClassMember(boundTypeName)
                             .build(),
                     )
-            }
-
-        val content = FileSpec.buildFile(generatedPackage, factoryClassName) {
-            addType(
-                typeBuilder
                     .addAnnotation(AssistedFactory::class)
                     .addFunction(
                         functionBuilder
