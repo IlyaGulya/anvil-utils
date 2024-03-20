@@ -1,0 +1,9 @@
+public abstract interface annotation class me/gulya/anvil/utils/AssistedKey : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/String;
+}
+
+public abstract interface annotation class me/gulya/anvil/utils/ContributesAssistedFactory : java/lang/annotation/Annotation {
+	public abstract fun boundType ()Ljava/lang/Class;
+	public abstract fun scope ()Ljava/lang/Class;
+}
+
