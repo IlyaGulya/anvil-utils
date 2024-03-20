@@ -11,7 +11,9 @@ import com.squareup.kotlinpoet.*
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import me.gulya.anvil.utils.AssistedKey
 import me.gulya.anvil.utils.ContributesAssistedFactory
+import me.gulya.anvil.utils.ParameterKey
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.psi.KtFile
 import java.io.File
@@ -49,51 +51,12 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                 .scope()
                 .asClassName()
 
-        val boundType = annotation.boundTypeOrNull()
-
-        boundType ?: throw AnvilCompilationExceptionAnnotationReference(
-            annotation,
-            "The @ContributesAssistedFactory annotation on class '${assistedFactoryClass.shortName}' " +
-                    "must have a 'boundType' parameter",
-        )
-
-        val factoryMethod = boundType.functions.singleOrNull { it.isAbstract() }
-
-        val primaryConstructor = assistedFactoryClass.constructors.singleOrNull()
-
-        primaryConstructor ?: throw AnvilCompilationExceptionClassReference(
-            assistedFactoryClass,
-            "Class '${assistedFactoryClass.shortName}' annotated with @ContributesAssistedFactory " +
-                    "must have a single primary constructor",
-        )
-
-        if (!primaryConstructor.isAnnotatedWith(AssistedInject::class.fqName)) {
-            throw AnvilCompilationExceptionFunctionReference(
-                primaryConstructor,
-                "Class '${assistedFactoryClass.shortName}' annotated with @ContributesAssistedFactory " +
-                        "must have its primary constructor annotated with @AssistedInject",
-            )
-        }
-
-        val assistedParameters = primaryConstructor.parameters
-            .filter { it.isAnnotatedWith(Assisted::class.fqName) }
-
-        BoundTypeValidator(
-            boundType = boundType,
-            assistedParameters = assistedParameters,
+        val generationDetails = ContributesAssistedFactoryValidator(
             annotation = annotation,
             assistedFactoryClass = assistedFactoryClass
         ).validate()
 
-        val functionBuilder =
-            if (factoryMethod != null) {
-                FunSpec
-                    .builder(factoryMethod.name)
-                    .addModifiers(KModifier.OVERRIDE)
-            } else {
-                FunSpec.builder("create")
-            }
-
+        val boundType = generationDetails.boundType
         val boundTypeName = boundType.asTypeName()
         val typeBuilder =
             if (boundType.isInterface()) {
@@ -119,17 +82,16 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                     )
                     .addAnnotation(AssistedFactory::class)
                     .addFunction(
-                        functionBuilder
-                            .addModifiers(KModifier.ABSTRACT)
+                        FunSpec
+                            .builder(generationDetails.factoryMethod.name)
+                            .addModifiers(KModifier.OVERRIDE, KModifier.ABSTRACT)
                             .apply {
-                                assistedParameters.forEach { parameter ->
+                                generationDetails.factoryMethod.parameters.forEach { parameter ->
+                                    val type = parameter.type().asTypeName()
                                     addParameter(
                                         ParameterSpec
-                                            .builder(
-                                                parameter.name,
-                                                parameter.type().asTypeName(),
-                                            )
-                                            .assisted(parameter.assistedValue())
+                                            .builder(parameter.name, type)
+                                            .assisted(parameter.assistedKeyValue())
                                             .build(),
                                     )
                                 }
@@ -143,13 +105,35 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
         return createGeneratedFile(codeGenDir, generatedPackage, factoryClassName, content)
     }
 
-    class BoundTypeValidator(
-        private val boundType: ClassReference,
-        private val assistedParameters: List<ParameterReference>,
+    internal class ContributesAssistedFactoryValidator(
         private val annotation: AnnotationReference,
         private val assistedFactoryClass: ClassReference,
     ) {
-        fun validate() {
+        fun validate(): GenerationDetails {
+            val boundType = annotation.boundTypeOrNull()
+
+            boundType ?: throw AnvilCompilationExceptionAnnotationReference(
+                annotation,
+                "The @ContributesAssistedFactory annotation on class '${assistedFactoryClass.shortName}' " +
+                        "must have a 'boundType' parameter",
+            )
+
+            val primaryConstructor = assistedFactoryClass.constructors.singleOrNull()
+
+            primaryConstructor ?: throw AnvilCompilationExceptionClassReference(
+                assistedFactoryClass,
+                "Class '${assistedFactoryClass.shortName}' annotated with @ContributesAssistedFactory " +
+                        "must have a single primary constructor",
+            )
+
+            if (!primaryConstructor.isAnnotatedWith(AssistedInject::class.fqName)) {
+                throw AnvilCompilationExceptionFunctionReference(
+                    primaryConstructor,
+                    "Class '${assistedFactoryClass.shortName}' annotated with @ContributesAssistedFactory " +
+                            "must have its primary constructor annotated with @AssistedInject",
+                )
+            }
+
             if (!boundType.isAbstract() && !boundType.isInterface()) {
                 throw AnvilCompilationExceptionAnnotationReference(
                     annotation,
@@ -165,10 +149,12 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                 "The bound type '${boundType.shortName}' for @ContributesAssistedFactory " +
                         "must have a single abstract method",
             )
-
             val factoryMethodParameters = factoryMethod.parameters
+            val constructorParameters = primaryConstructor.parameters
+                .filter { it.isAnnotatedWith(Assisted::class.fqName) }
+                .associateBy { ParameterKey(it.type().asTypeName(), it.assistedValue()) }
 
-            if (assistedParameters.size != factoryMethodParameters.size) {
+            if (constructorParameters.size != factoryMethodParameters.size) {
                 throw AnvilCompilationExceptionFunctionReference(
                     factoryMethod,
                     "The assisted factory method parameters in '${boundType.shortName}.${factoryMethod.name}' " +
@@ -177,32 +163,75 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                 )
             }
 
-            assistedParameters.forEachIndexed { index, assistedParameter ->
-                val factoryParameter = factoryMethodParameters[index]
-                if (assistedParameter.type().asTypeName() != factoryParameter.type().asTypeName()) {
+            factoryMethodParameters.forEach { factoryParameter ->
+                val isAnnotatedWithDaggerAssisted = factoryParameter.isAnnotatedWith(Assisted::class.fqName)
+                val isAnnotatedWithAssistedKey = factoryParameter.isAnnotatedWith(AssistedKey::class.fqName)
+                if (isAnnotatedWithDaggerAssisted && !isAnnotatedWithAssistedKey) {
                     throw AnvilCompilationExceptionParameterReference(
-                        assistedParameter,
-                        "The type of assisted parameter '${assistedParameter.name}' in the primary constructor " +
-                                "of '${assistedFactoryClass.shortName}' must match the type of the corresponding parameter " +
-                                "in the factory method '${boundType.shortName}.${factoryMethod.name}'. " +
-                                "Expected: ${factoryParameter.type().asTypeName()}, Found: ${
-                                    assistedParameter.type().asTypeName()
-                                }",
+                        factoryParameter,
+                        "The parameter '${factoryParameter.name}' in the factory method " +
+                                "'${boundType.shortName}.${factoryMethod.name}' must be annotated with " +
+                                "@${AssistedKey::class.simpleName} instead of @${Assisted::class.simpleName} " +
+                                "to avoid conflicts with Dagger's @${AssistedFactory::class.simpleName} annotation",
                     )
                 }
-                if (assistedParameter.assistedValue() != factoryParameter.assistedValue()) {
-                    throw AnvilCompilationExceptionParameterReference(
-                        assistedParameter,
-                        "The @Assisted annotation value for parameter '${assistedParameter.name}' in the primary constructor " +
-                                "of '${assistedFactoryClass.shortName}' must match the value on the corresponding parameter " +
-                                "in the factory method '${boundType.shortName}.${factoryMethod.name}'",
-                    )
-                }
+
+                val assistedKey = factoryParameter.assistedKeyValue()
+                val constructorParameter = constructorParameters[factoryParameter.asParameterKey { assistedKey }]
+
+                constructorParameter ?: throw AnvilCompilationExceptionParameterReference(
+                    factoryParameter,
+                    "The factory method parameter '${factoryParameter.name}' does not match any @Assisted parameter " +
+                            "in the primary constructor of '${assistedFactoryClass.shortName}'",
+                )
+
+                // TODO: Improve heuristics for better error messages
+//                val factoryParameterTypeName = factoryParameter.type().asTypeName()
+//                val constructorParameterTypeName = constructorParameter.type().asTypeName()
+//                if (constructorParameterTypeName != factoryParameterTypeName) {
+//                    throw AnvilCompilationExceptionParameterReference(
+//                        factoryParameter,
+//                        "The type of factory method parameter '${factoryParameter.name}' in " +
+//                                "'${boundType.shortName}.${factoryMethod.name}' must match the type of the corresponding " +
+//                                "@Assisted parameter in the primary constructor of '${assistedFactoryClass.shortName}'. " +
+//                                "Expected: $constructorParameterTypeName, Found: $factoryParameterTypeName",
+//                    )
+//                }
+
+//                if (factoryParameter.assistedKeyValue() != constructorParameter.assistedValue()) {
+//                    val clarification =
+//                        when {
+//                            factoryParameter.assistedKeyValue() == null -> "Expected @AssistedKey(\"$assistedKey\") annotation on the '${boundType.shortName}.${factoryMethod.name}' parameter '${factoryParameter.name}'"
+//                            constructorParameter.assistedValue() == null -> "Expected @Assisted annotation on the '${assistedFactoryClass.shortName}' primary constructor parameter '${constructorParameter.name}'"
+//                            else -> null
+//                        }
+//
+//                    val actualClarification = clarification?.let { ". $it" } ?: ""
+//
+//                    throw AnvilCompilationExceptionParameterReference(
+//                        factoryParameter,
+//                        "The @Assisted annotation value for parameter '${factoryParameter.name}' in the primary constructor " +
+//                                "of '${assistedFactoryClass.shortName}' must match the value on the corresponding parameter " +
+//                                "in the factory method '${boundType.shortName}.${factoryMethod.name}'" +
+//                                actualClarification,
+//                    )
+//                }
             }
+
+            return GenerationDetails(
+                boundType = boundType,
+                factoryMethod = factoryMethod,
+                factoryParameters = constructorParameters,
+            )
         }
     }
-
 }
+
+internal data class GenerationDetails(
+    val boundType: ClassReference,
+    val factoryMethod: MemberFunctionReference,
+    val factoryParameters: Map<ParameterKey, ParameterReference>,
+)
 
 private fun AnnotationSpec.Builder.addClassMember(
     member: TypeName,
@@ -224,9 +253,21 @@ private fun ParameterSpec.Builder.assisted(value: String?): ParameterSpec.Builde
     return this
 }
 
+private fun ParameterReference.asParameterKey(keyFactory: (ParameterReference) -> String?): ParameterKey {
+    return ParameterKey(type().asTypeName(), keyFactory(this))
+}
+
 private fun ParameterReference.assistedValue(): String? {
+    return annotationStringValue<Assisted>()
+}
+
+private fun ParameterReference.assistedKeyValue(): String? {
+    return annotationStringValue<AssistedKey>()
+}
+
+private inline fun <reified T> AnnotatedReference.annotationStringValue(): String? {
     return annotations
-        .singleOrNull { it.fqName == Assisted::class.fqName }
+        .singleOrNull { it.fqName == T::class.fqName }
         ?.argumentAt("value", 0)
         ?.value<String>()
         ?.takeIf { it.isNotBlank() }

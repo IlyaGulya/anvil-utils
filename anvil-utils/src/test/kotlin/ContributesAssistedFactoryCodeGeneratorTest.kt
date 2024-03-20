@@ -22,13 +22,14 @@ class ContributesAssistedFactoryCodeGeneratorTest {
                 import dagger.assisted.Assisted
                 import dagger.assisted.AssistedInject
                 import me.gulya.anvil.utils.ContributesAssistedFactory
+                import me.gulya.anvil.utils.AssistedKey
 
                 interface TestApi
 
                 interface TestApiFactory {
                     fun create(
                         bebe: String,
-                        @Assisted("test") bebe2: String,
+                        @AssistedKey("test") bebe2: String,
                     ): TestApi
                 }
 
@@ -73,13 +74,14 @@ class ContributesAssistedFactoryCodeGeneratorTest {
 
             import dagger.assisted.Assisted
             import me.gulya.anvil.utils.ContributesAssistedFactory
+            import me.gulya.anvil.utils.AssistedKey
 
             interface TestApi
 
             interface TestApiFactory {
                 fun create(
                     bebe: String,
-                    @Assisted("test") bebe2: String,
+                    @AssistedKey("test") bebe2: String,
                 ): TestApi
             }
 
@@ -108,13 +110,14 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             import dagger.assisted.Assisted
             import dagger.assisted.AssistedInject
             import me.gulya.anvil.utils.ContributesAssistedFactory
+            import me.gulya.anvil.utils.AssistedKey
 
             interface TestApi
 
             interface TestApiFactory {
                 fun create(
                     bebe: String,
-                    @Assisted("test") bebe2: String,
+                    @AssistedKey("test") bebe2: String,
                 ): TestApi
             }
 
@@ -145,18 +148,19 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             import dagger.assisted.Assisted
             import dagger.assisted.AssistedInject
             import me.gulya.anvil.utils.ContributesAssistedFactory
+            import me.gulya.anvil.utils.AssistedKey
 
             interface TestApi
 
             interface TestApiFactory {
                 fun create(
                     bebe: String,
-                    @Assisted("test") bebe2: String,
+                    @AssistedKey("test") bebe2: String,
                 ): TestApi
 
                 fun create2(
                     bebe: String,
-                    @Assisted("test") bebe2: String,
+                    @AssistedKey("test") bebe2: String,
                 ): TestApi
             }
 
@@ -234,8 +238,8 @@ class ContributesAssistedFactoryCodeGeneratorTest {
 
             @ContributesAssistedFactory(Any::class, TestApiFactory::class)
             class DefaultTestApi @AssistedInject constructor(
-                @Assisted private val bebe: String,
-                @Assisted("test") private val bebe2: String,
+                @Assisted("bebe") private val bebe: String,
+                @Assisted("bebe2") private val bebe2: String,
                 private val bebe3: String,
             ) : TestApi
         """,
@@ -243,9 +247,11 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
 
             assertThat(messages).contains(
-                "The @Assisted annotation value for parameter 'bebe2' in the primary constructor " +
-                        "of 'DefaultTestApi' must match the value on the corresponding parameter in " +
-                        "the factory method 'TestApiFactory.create'"
+                "The factory method parameter 'bebe' does not match any " +
+                        "@Assisted parameter in the primary constructor of 'DefaultTestApi'"
+//                "The @Assisted annotation value for parameter 'bebe2' in the primary constructor " +
+//                        "of 'DefaultTestApi' must match the value on the corresponding parameter in " +
+//                        "the factory method 'TestApiFactory.create'"
             )
         }
     }
@@ -304,9 +310,11 @@ class ContributesAssistedFactoryCodeGeneratorTest {
         ) {
             assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
             assertThat(messages).contains(
-                "The type of assisted parameter 'param' in the primary constructor of 'DefaultTestApi' " +
-                        "must match the type of the corresponding parameter in the factory method 'TestApiFactory.create'. " +
-                        "Expected: kotlin.Int, Found: kotlin.String"
+                "The factory method parameter 'param' does not match any " +
+                        "@Assisted parameter in the primary constructor of 'DefaultTestApi'"
+//                "The type of assisted parameter 'param' in the primary constructor of 'DefaultTestApi' " +
+//                        "must match the type of the corresponding parameter in the factory method 'TestApiFactory.create'. " +
+//                        "Expected: kotlin.Int, Found: kotlin.String"
             )
         }
     }
@@ -367,6 +375,121 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             val abstractClassFactoryClass = classLoader.loadClass("com.test.DefaultTestApi2_AssistedFactory")
             assertThat(abstractClassFactoryClass.isInterface).isFalse()
             assertThat(Modifier.isAbstract(abstractClassFactoryClass.modifiers)).isTrue()
+        }
+    }
+
+    @Test
+    fun `factory method parameters must be annotated with @AssistedKey instead of @Assisted`() {
+        compileAnvil(
+            """
+            package com.test
+
+            import dagger.assisted.Assisted
+            import dagger.assisted.AssistedInject
+            import me.gulya.anvil.utils.ContributesAssistedFactory
+
+            interface TestApi
+
+            interface TestApiFactory {
+                fun create(
+                    @Assisted("test") assistedParam: Int
+                ): TestApi
+            }
+
+            @ContributesAssistedFactory(Any::class, TestApiFactory::class)
+            class DefaultTestApi @AssistedInject constructor(
+                @Assisted("test") assistedParam: Int
+            ) : TestApi
+            """
+        ) {
+            assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
+            assertThat(messages).contains(
+                "The parameter 'assistedParam' in the factory method 'TestApiFactory.create' " +
+                        "must be annotated with @AssistedKey instead of @Assisted to avoid conflicts " +
+                        "with Dagger's @AssistedFactory annotation"
+            )
+        }
+    }
+
+    @Test
+    fun `should fail on missing assisted key of constructor parameter`() {
+        compileAnvil(
+            """
+        package com.test
+        
+        import dagger.assisted.AssistedInject
+        import dagger.assisted.Assisted
+        import me.gulya.anvil.utils.ContributesAssistedFactory
+        import me.gulya.anvil.utils.AssistedKey
+        
+        interface TestApi
+        
+        interface TestApiFactory {
+            fun create(
+                @AssistedKey("param1") param1: String
+            ): TestApi
+        }
+        
+        @ContributesAssistedFactory(Any::class, TestApiFactory::class)
+        class DefaultTestApi @AssistedInject constructor(
+            @Assisted param1: String,
+        ) : TestApi
+        """
+        ) {
+            assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
+            assertThat(messages).contains(
+                "The factory method parameter 'param1' does not match any " +
+                        "@Assisted parameter in the primary constructor of 'DefaultTestApi'"
+            )
+        }
+    }
+
+    @Test
+    fun `generated factory method parameters match the order of the bound type factory method parameters`() {
+        compileAnvil(
+            """
+        package com.test
+        
+        import dagger.assisted.AssistedInject
+        import dagger.assisted.Assisted
+        import me.gulya.anvil.utils.ContributesAssistedFactory
+        import me.gulya.anvil.utils.AssistedKey
+        
+        interface TestApi
+        
+        interface TestApiFactory {
+            fun create(
+                @AssistedKey("param2") param2: Int,
+                @AssistedKey("param3") param3: Boolean,
+                @AssistedKey("param1") param1: String
+            ): TestApi
+        }
+        
+        @ContributesAssistedFactory(Any::class, TestApiFactory::class)
+        class DefaultTestApi @AssistedInject constructor(
+            @Assisted("param1") param1: String,
+            @Assisted("param2") param2: Int,
+            @Assisted("param3") param3: Boolean
+        ) : TestApi
+        """,
+            allWarningsAsErrors = false,
+        ) {
+            assertThat(exitCode).isEqualTo(OK)
+
+            val testApiFactoryClass = classLoader.loadClass("com.test.TestApiFactory")
+            val generatedFactoryClass = classLoader.loadClass("com.test.DefaultTestApi_AssistedFactory")
+            val generatedFactoryMethod = generatedFactoryClass.declaredMethods.single()
+
+            assertThat(generatedFactoryMethod.parameterTypes).isEqualTo(
+                testApiFactoryClass.declaredMethods.single().parameterTypes
+            )
+
+            assertThat(generatedFactoryMethod.parameters.map { it.getAnnotation(Assisted::class.java)?.value })
+                .containsExactly(
+                    "param2",
+                    "param3",
+                    "param1"
+                )
         }
     }
 }

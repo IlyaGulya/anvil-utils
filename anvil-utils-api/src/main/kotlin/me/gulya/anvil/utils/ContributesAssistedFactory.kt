@@ -8,7 +8,8 @@ import kotlin.reflect.KClass
  *
  * [boundType] should be treated the same way as regular Dagger @AssistedFactory.
  * [boundType] should conform to the same requirements as regular Dagger @AssistedFactory.
- * [boundType] factory method can have @Assisted parameters.
+ * [boundType] factory method can have @Assisted parameters. Due to Dagger 2 limitations you should
+ * use another annotation on your [boundType] factory method parameters:
  *
  * Usage example:
  *
@@ -19,14 +20,14 @@ import kotlin.reflect.KClass
  *
  * interface MyFactory {
  *   fun create(
- *     @Assisted("assisted") assistedParam: Int,
+ *     assistedParam: Int,
  *   ): MyClass
  * }
  *
  * @ContributesAssistedFactory(AppScope::class, MyFactory::class)
  * class DefaultMyClass @AssistedInject constructor(
  *   regularParam: String,
- *   @Assisted("assisted") assistedParam: Int
+ *   @AssistedKey assistedParam: Int
  * ) : MyClass
  * ```
  *
@@ -37,7 +38,7 @@ import kotlin.reflect.KClass
  * @AssistedFactory
  * interface MyClass_AssistedFactory : MyFactory {
  *   override fun create(
- *      @Assisted("assisted") assistedParam: Int,
+ *      assistedParam: Int,
  *   ): DefaultMyClass
  * }
  * ```
@@ -46,7 +47,7 @@ import kotlin.reflect.KClass
  * @param boundType The type that the generated factory will implement or extend.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class ContributesAssistedFactory(
+public annotation class ContributesAssistedFactory(
     val scope: KClass<*>,
     val boundType: KClass<*>,
 )
