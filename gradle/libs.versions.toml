@@ -4,6 +4,8 @@ anvil = "2.4.9"
 dagger = "2.51"
 kotlinx-binaryCompatibility = "0.14.0"
 dropbox-dependencyGuard = "0.5.0"
+mavenPublish = "0.28.0"
+dokka = "1.9.20"
 
 [libraries]
 anvil-compiler-api = { module = "com.squareup.anvil:compiler-api", version.ref = "anvil" }
@@ -19,10 +21,15 @@ google-truth = "com.google.truth:truth:1.4.2"
 junit = "junit:junit:4.13.2"
 
 kotlinx-binaryCompatibility = { module = "org.jetbrains.kotlinx:binary-compatibility-validator", version.ref = "kotlinx-binaryCompatibility" }
+plugin-mavenPublish = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "mavenPublish" }
+plugin-kotlin-jvm = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+plugin-kotlin-dokka = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+kotlin-dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 anvil = { id = "com.squareup.anvil", version.ref = "anvil" }
 kotlinx-binaryCompatibility = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "kotlinx-binaryCompatibility" }
 dependencyGuard = { id = "com.dropbox.dependency-guard", version.ref = "dropbox-dependencyGuard" }
+mavenPublish = { id = "com.vanniktech.maven.publish.base", version.ref = "mavenPublish" }

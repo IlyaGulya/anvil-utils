@@ -15,8 +15,8 @@ kotlin {
 }
 
 dependencies {
-    anvil(project(":anvil-utils"))
-    implementation(project(":anvil-utils-api"))
+    anvil(projects.compiler)
+    implementation(projects.annotations)
 
     implementation(libs.dagger)
     kapt(libs.dagger.compiler)
