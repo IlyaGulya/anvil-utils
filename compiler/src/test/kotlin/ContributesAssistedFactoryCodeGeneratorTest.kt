@@ -10,9 +10,9 @@ import org.junit.Test
 import java.lang.reflect.AnnotatedElement
 import java.lang.reflect.Modifier
 
-@OptIn(ExperimentalCompilerApi::class)
 class ContributesAssistedFactoryCodeGeneratorTest {
 
+    @Suppress("UncheckedCast")
     @Test
     fun `an assisted factory with binding is generated`() {
         compileAnvil(

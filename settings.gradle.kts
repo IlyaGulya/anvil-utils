@@ -20,4 +20,5 @@ dependencyResolutionManagement {
 
 include(":compiler")
 include(":annotations")
+include(":androidx-stub")
 include(":samples")

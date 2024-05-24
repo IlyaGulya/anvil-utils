@@ -20,6 +20,7 @@ dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = 
 google-truth = "com.google.truth:truth:1.4.2"
 junit = "junit:junit:4.13.2"
 
+kotlin-reflect-full = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinx-binaryCompatibility = { module = "org.jetbrains.kotlinx:binary-compatibility-validator", version.ref = "kotlinx-binaryCompatibility" }
 plugin-mavenPublish = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "mavenPublish" }
 plugin-kotlin-jvm = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }

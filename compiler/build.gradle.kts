@@ -13,6 +13,7 @@ publish {
 
 dependencies {
     implementation(projects.annotations)
+    compileOnly(projects.androidxStub)
 
     api(libs.anvil.compiler.api)
 
@@ -26,4 +27,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(testFixtures(libs.anvil.compiler.utils))
     testImplementation(libs.google.truth)
+    testImplementation(projects.androidxStub)
+    testImplementation(libs.kotlin.reflect.full)
 }

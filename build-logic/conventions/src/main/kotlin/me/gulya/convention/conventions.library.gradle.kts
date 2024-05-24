@@ -6,6 +6,10 @@ plugins {
 kotlin {
     jvmToolchain(17)
     compilerOptions {
-        optIn.add("com.squareup.anvil.annotations.ExperimentalAnvilApi")
+        optIn.addAll(
+            "com.squareup.anvil.annotations.ExperimentalAnvilApi",
+            "me.gulya.anvil.api.ExperimentalAnvilUtilsApi",
+            "org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi"
+        )
     }
 }
