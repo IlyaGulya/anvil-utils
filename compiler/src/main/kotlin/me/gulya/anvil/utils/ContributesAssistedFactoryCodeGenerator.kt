@@ -2,7 +2,7 @@ import com.google.auto.service.AutoService
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.anvil.compiler.api.AnvilContext
 import com.squareup.anvil.compiler.api.CodeGenerator
-import com.squareup.anvil.compiler.api.GeneratedFile
+import com.squareup.anvil.compiler.api.GeneratedFileWithSources
 import com.squareup.anvil.compiler.api.createGeneratedFile
 import com.squareup.anvil.compiler.internal.buildFile
 import com.squareup.anvil.compiler.internal.fqName
@@ -30,7 +30,7 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
         codeGenDir: File,
         module: ModuleDescriptor,
         projectFiles: Collection<KtFile>,
-    ): Collection<GeneratedFile> {
+    ): Collection<GeneratedFileWithSources> {
         return projectFiles.classAndInnerClassReferences(module)
             .filter { it.isAnnotatedWith(contributesAssistedFactoryFqName) }
             .map { generateAssistedFactory(it, codeGenDir) }
@@ -40,7 +40,7 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
     private fun generateAssistedFactory(
         assistedFactoryClass: ClassReference,
         codeGenDir: File,
-    ): GeneratedFile {
+    ): GeneratedFileWithSources {
         val generatedPackage = assistedFactoryClass.packageFqName.toString()
         val factoryClassName = "${assistedFactoryClass.shortName}_AssistedFactory"
 
@@ -102,7 +102,13 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                     .build(),
             )
         }
-        return createGeneratedFile(codeGenDir, generatedPackage, factoryClassName, content)
+        return createGeneratedFile(
+            codeGenDir = codeGenDir,
+            packageName = generatedPackage,
+            fileName = factoryClassName,
+            content = content,
+            sourceFile = assistedFactoryClass.containingFileAsJavaFile,
+        )
     }
 
     internal class ContributesAssistedFactoryValidator(

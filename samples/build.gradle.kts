@@ -12,6 +12,14 @@ kotlin {
     compilerOptions {
         freeCompilerArgs = listOf("-Xextended-compiler-checks")
     }
+
+    sourceSets {
+        main {
+            kotlin {
+                srcDir("build/anvil/main/generated")
+            }
+        }
+    }
 }
 
 dependencies {

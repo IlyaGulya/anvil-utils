@@ -1,6 +1,6 @@
 [versions]
-kotlin = "1.9.23"
-anvil = "2.4.9"
+kotlin = "2.0.0"
+anvil = "2.5.0-beta09"
 dagger = "2.51"
 kotlinx-binaryCompatibility = "0.14.0"
 dropbox-dependencyGuard = "0.5.0"
