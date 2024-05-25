@@ -1,17 +1,46 @@
 import com.google.common.truth.Truth.assertThat
 import com.squareup.anvil.annotations.ContributesBinding
+import com.squareup.anvil.compiler.internal.testing.AnvilCompilationMode
+import com.squareup.anvil.compiler.internal.testing.AnvilCompilationMode.Embedded
+import com.squareup.anvil.compiler.internal.testing.AnvilCompilationMode.Ksp
 import com.squareup.anvil.compiler.internal.testing.compileAnvil
+import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation.ExitCode.COMPILATION_ERROR
 import com.tschuchort.compiletesting.KotlinCompilation.ExitCode.OK
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import org.junit.runners.Parameterized.Parameters
 import java.lang.reflect.AnnotatedElement
 import java.lang.reflect.Modifier
 
+@RunWith(Parameterized::class)
 @OptIn(ExperimentalCompilerApi::class)
-class ContributesAssistedFactoryCodeGeneratorTest {
+class ContributesAssistedFactoryCodeGeneratorTest(
+    private val mode: AnvilCompilationMode,
+) {
+
+    companion object {
+        @Parameters(name = "mode: {0}")
+        @JvmStatic
+        fun params() = kspParams()
+    }
+
+    private fun compileAnvil(
+        @org.intellij.lang.annotations.Language("kotlin") source: String,
+        previousCompilationResult: JvmCompilationResult? = null,
+        block: JvmCompilationResult.() -> Unit = {},
+    ) {
+        compileAnvil(
+            source,
+            block = block,
+            mode = mode,
+            previousCompilationResult = previousCompilationResult,
+        )
+    }
 
     @Test
     fun `an assisted factory with binding is generated`() {
@@ -448,7 +477,8 @@ class ContributesAssistedFactoryCodeGeneratorTest {
     fun `generated factory method parameters match the order of the bound type factory method parameters`() {
         compileAnvil(
             """
-        package com.test
+        @file:Suppress("UNUSED_PARAMETER")
+        package com.test 
         
         import dagger.assisted.AssistedInject
         import dagger.assisted.Assisted
@@ -472,7 +502,6 @@ class ContributesAssistedFactoryCodeGeneratorTest {
             @Assisted("param3") param3: Boolean
         ) : TestApi
         """,
-            allWarningsAsErrors = false,
         ) {
             assertThat(exitCode).isEqualTo(OK)
 
@@ -492,6 +521,47 @@ class ContributesAssistedFactoryCodeGeneratorTest {
                 )
         }
     }
+
+    @Test
+    fun `should not fail on lambda types from another modules`() {
+        compileAnvil(
+            """
+        @file:Suppress("UNUSED_PARAMETER")
+        package com.test
+        
+        import me.gulya.anvil.assisted.AssistedKey
+        
+        interface TestApi
+        
+        interface TestApiFactory {
+            fun create(
+                @AssistedKey("param1") param1: () -> String
+            ): TestApi
+        } 
+        """
+        ) {
+            assertThat(exitCode).isEqualTo(OK)
+
+            compileAnvil(
+                """
+                @file:Suppress("UNUSED_PARAMETER")
+                package com.test
+
+                import dagger.assisted.AssistedInject
+                import dagger.assisted.Assisted
+                import me.gulya.anvil.assisted.ContributesAssistedFactory
+
+                @ContributesAssistedFactory(Any::class, TestApiFactory::class)
+                class DefaultTestApi @AssistedInject constructor(
+                    @Assisted("param1") param1: () -> String
+                ) : TestApi
+                """.trimIndent(),
+                previousCompilationResult = this,
+            ) {
+                assertThat(exitCode).isEqualTo(OK)
+            }
+        }
+    }
 }
 
 inline fun <reified T> AnnotatedElement.annotationOrNull(): T? =
@@ -499,3 +569,16 @@ inline fun <reified T> AnnotatedElement.annotationOrNull(): T? =
 
 inline fun <reified T> AnnotatedElement.requireAnnotation(): T =
     requireNotNull(annotationOrNull<T>()) { "Couldn't find annotation ${T::class}" }
+
+/**
+ * Parameters for configuring [AnvilCompilationMode] and whether to run a full test run or not.
+ */
+internal fun kspParams(
+    embeddedCreator: () -> Embedded? = { Embedded() },
+    kspCreator: () -> Ksp? = { Ksp() },
+): Collection<Any> {
+    return listOfNotNull(
+        embeddedCreator(),
+        kspCreator(),
+    ).distinct()
+}
