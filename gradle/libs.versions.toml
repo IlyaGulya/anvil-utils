@@ -1,16 +1,19 @@
 [versions]
 kotlin = "2.0.0"
 anvil = "2.5.0-beta09"
-dagger = "2.51"
+ksp = "2.0.0-1.0.21"
+dagger = "2.51.1"
 kotlinx-binaryCompatibility = "0.14.0"
 dropbox-dependencyGuard = "0.5.0"
 mavenPublish = "0.28.0"
 dokka = "1.9.20"
+kotlinpoet = "1.17.0"
 
 [libraries]
 anvil-compiler-api = { module = "com.squareup.anvil:compiler-api", version.ref = "anvil" }
 anvil-compiler-utils = { module = "com.squareup.anvil:compiler-utils", version.ref = "anvil" }
-kotlinpoet = "com.squareup:kotlinpoet:1.16.0"
+kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
+kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 google-autoservice-annotations = "com.google.auto.service:auto-service-annotations:1.1.1"
 google-autoservice-compiler = "com.google.auto.service:auto-service:1.1.1"
 
@@ -19,6 +22,8 @@ dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = 
 
 google-truth = "com.google.truth:truth:1.4.2"
 junit = "junit:junit:4.13.2"
+
+ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 
 kotlinx-binaryCompatibility = { module = "org.jetbrains.kotlinx:binary-compatibility-validator", version.ref = "kotlinx-binaryCompatibility" }
 plugin-mavenPublish = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "mavenPublish" }
@@ -30,6 +35,7 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 kotlin-dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 anvil = { id = "com.squareup.anvil", version.ref = "anvil" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlinx-binaryCompatibility = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "kotlinx-binaryCompatibility" }
 dependencyGuard = { id = "com.dropbox.dependency-guard", version.ref = "dropbox-dependencyGuard" }
 mavenPublish = { id = "com.vanniktech.maven.publish.base", version.ref = "mavenPublish" }

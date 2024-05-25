@@ -20,4 +20,8 @@ dependencyResolutionManagement {
 
 include(":compiler")
 include(":annotations")
-include(":samples")
+include(":samples:library:api")
+include(":samples:library:impl:ksp")
+include(":samples:library:impl:embedded")
+include(":samples:entrypoint:embedded")
+include(":samples:entrypoint:ksp")

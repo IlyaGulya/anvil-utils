@@ -18,7 +18,10 @@ dependencies {
 
     implementation(libs.anvil.compiler.utils)
     implementation(libs.kotlinpoet)
+    implementation(libs.kotlinpoet.ksp)
     implementation(libs.dagger)
+
+    implementation(libs.ksp.api)
 
     compileOnly(libs.google.autoservice.annotations)
     kapt(libs.google.autoservice.compiler)

@@ -6,8 +6,26 @@ import com.squareup.anvil.compiler.api.GeneratedFileWithSources
 import com.squareup.anvil.compiler.api.createGeneratedFile
 import com.squareup.anvil.compiler.internal.buildFile
 import com.squareup.anvil.compiler.internal.fqName
-import com.squareup.anvil.compiler.internal.reference.*
-import com.squareup.kotlinpoet.*
+import com.squareup.anvil.compiler.internal.reference.AnnotatedReference
+import com.squareup.anvil.compiler.internal.reference.AnnotationReference
+import com.squareup.anvil.compiler.internal.reference.AnvilCompilationExceptionAnnotationReference
+import com.squareup.anvil.compiler.internal.reference.AnvilCompilationExceptionClassReference
+import com.squareup.anvil.compiler.internal.reference.AnvilCompilationExceptionFunctionReference
+import com.squareup.anvil.compiler.internal.reference.AnvilCompilationExceptionParameterReference
+import com.squareup.anvil.compiler.internal.reference.ClassReference
+import com.squareup.anvil.compiler.internal.reference.MemberFunctionReference
+import com.squareup.anvil.compiler.internal.reference.ParameterReference
+import com.squareup.anvil.compiler.internal.reference.argumentAt
+import com.squareup.anvil.compiler.internal.reference.asClassName
+import com.squareup.anvil.compiler.internal.reference.asTypeName
+import com.squareup.anvil.compiler.internal.reference.classAndInnerClassReferences
+import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.TypeName
+import com.squareup.kotlinpoet.TypeSpec
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -115,36 +133,32 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
         private val annotation: AnnotationReference,
         private val assistedFactoryClass: ClassReference,
     ) {
-        fun validate(): GenerationDetails {
+        fun validate(): KspGenerationDetails {
             val boundType = annotation.boundTypeOrNull()
 
             boundType ?: throw AnvilCompilationExceptionAnnotationReference(
                 annotation,
-                "The @ContributesAssistedFactory annotation on class '${assistedFactoryClass.shortName}' " +
-                        "must have a 'boundType' parameter",
+                Errors.missingBoundType(assistedFactoryClass.shortName),
             )
 
             val primaryConstructor = assistedFactoryClass.constructors.singleOrNull()
 
             primaryConstructor ?: throw AnvilCompilationExceptionClassReference(
                 assistedFactoryClass,
-                "Class '${assistedFactoryClass.shortName}' annotated with @ContributesAssistedFactory " +
-                        "must have a single primary constructor",
+                Errors.mustHaveSinglePrimaryConstructor(assistedFactoryClass.shortName),
             )
 
             if (!primaryConstructor.isAnnotatedWith(AssistedInject::class.fqName)) {
                 throw AnvilCompilationExceptionFunctionReference(
                     primaryConstructor,
-                    "Class '${assistedFactoryClass.shortName}' annotated with @ContributesAssistedFactory " +
-                            "must have its primary constructor annotated with @AssistedInject",
+                    Errors.primaryConstructorMustBeAnnotatedWithAssistedInject(assistedFactoryClass.shortName),
                 )
             }
 
             if (!boundType.isAbstract() && !boundType.isInterface()) {
                 throw AnvilCompilationExceptionAnnotationReference(
                     annotation,
-                    "The bound type '${boundType.shortName}' for @ContributesAssistedFactory on class " +
-                            "'${assistedFactoryClass.shortName}' must be an abstract class or interface",
+                    Errors.boundTypeMustBeAbstractOrInterface(boundType.shortName, assistedFactoryClass.shortName),
                 )
             }
 
@@ -152,8 +166,7 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
 
             factoryMethod ?: throw AnvilCompilationExceptionClassReference(
                 boundType,
-                "The bound type '${boundType.shortName}' for @ContributesAssistedFactory " +
-                        "must have a single abstract method",
+                Errors.boundTypeMustHasSingleAbstractMethod(boundType.shortName)
             )
             val factoryMethodParameters = factoryMethod.parameters
             val constructorParameters = primaryConstructor.parameters
@@ -163,9 +176,7 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
             if (constructorParameters.size != factoryMethodParameters.size) {
                 throw AnvilCompilationExceptionFunctionReference(
                     factoryMethod,
-                    "The assisted factory method parameters in '${boundType.shortName}.${factoryMethod.name}' " +
-                            "must match the @Assisted parameters in the primary constructor of " +
-                            "'${assistedFactoryClass.shortName}'",
+                    Errors.parameterMismatch(boundType.shortName, factoryMethod.name, assistedFactoryClass.shortName),
                 )
             }
 
@@ -175,10 +186,11 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
                 if (isAnnotatedWithDaggerAssisted && !isAnnotatedWithAssistedKey) {
                     throw AnvilCompilationExceptionParameterReference(
                         factoryParameter,
-                        "The parameter '${factoryParameter.name}' in the factory method " +
-                                "'${boundType.shortName}.${factoryMethod.name}' must be annotated with " +
-                                "@${AssistedKey::class.simpleName} instead of @${Assisted::class.simpleName} " +
-                                "to avoid conflicts with Dagger's @${AssistedFactory::class.simpleName} annotation",
+                        Errors.parameterMustBeAnnotatedWithAssistedKey(
+                            factoryParameter.name,
+                            boundType.shortName,
+                            factoryMethod.name
+                        ),
                     )
                 }
 
@@ -187,44 +199,14 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
 
                 constructorParameter ?: throw AnvilCompilationExceptionParameterReference(
                     factoryParameter,
-                    "The factory method parameter '${factoryParameter.name}' does not match any @Assisted parameter " +
-                            "in the primary constructor of '${assistedFactoryClass.shortName}'",
+                    Errors.parameterDoesNotMatchAssistedParameter(
+                        factoryParameter.name,
+                        assistedFactoryClass.shortName
+                    ),
                 )
-
-                // TODO: Improve heuristics for better error messages
-//                val factoryParameterTypeName = factoryParameter.type().asTypeName()
-//                val constructorParameterTypeName = constructorParameter.type().asTypeName()
-//                if (constructorParameterTypeName != factoryParameterTypeName) {
-//                    throw AnvilCompilationExceptionParameterReference(
-//                        factoryParameter,
-//                        "The type of factory method parameter '${factoryParameter.name}' in " +
-//                                "'${boundType.shortName}.${factoryMethod.name}' must match the type of the corresponding " +
-//                                "@Assisted parameter in the primary constructor of '${assistedFactoryClass.shortName}'. " +
-//                                "Expected: $constructorParameterTypeName, Found: $factoryParameterTypeName",
-//                    )
-//                }
-
-//                if (factoryParameter.assistedKeyValue() != constructorParameter.assistedValue()) {
-//                    val clarification =
-//                        when {
-//                            factoryParameter.assistedKeyValue() == null -> "Expected @AssistedKey(\"$assistedKey\") annotation on the '${boundType.shortName}.${factoryMethod.name}' parameter '${factoryParameter.name}'"
-//                            constructorParameter.assistedValue() == null -> "Expected @Assisted annotation on the '${assistedFactoryClass.shortName}' primary constructor parameter '${constructorParameter.name}'"
-//                            else -> null
-//                        }
-//
-//                    val actualClarification = clarification?.let { ". $it" } ?: ""
-//
-//                    throw AnvilCompilationExceptionParameterReference(
-//                        factoryParameter,
-//                        "The @Assisted annotation value for parameter '${factoryParameter.name}' in the primary constructor " +
-//                                "of '${assistedFactoryClass.shortName}' must match the value on the corresponding parameter " +
-//                                "in the factory method '${boundType.shortName}.${factoryMethod.name}'" +
-//                                actualClarification,
-//                    )
-//                }
             }
 
-            return GenerationDetails(
+            return KspGenerationDetails(
                 boundType = boundType,
                 factoryMethod = factoryMethod,
                 factoryParameters = constructorParameters,
@@ -233,7 +215,7 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
     }
 }
 
-internal data class GenerationDetails(
+internal data class KspGenerationDetails(
     val boundType: ClassReference,
     val factoryMethod: MemberFunctionReference,
     val factoryParameters: Map<ParameterKey, ParameterReference>,
