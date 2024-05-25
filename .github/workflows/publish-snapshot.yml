@@ -2,9 +2,9 @@ name: Publish snapshot
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
+#  push:
+#    branches:
+#      - master
 
 jobs:
   publish-snapshot:
