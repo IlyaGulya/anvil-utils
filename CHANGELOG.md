@@ -3,13 +3,8 @@
 ## [Unreleased]
 
 ### Added
-- Support Anvil KSP mode
 
 ### Changed
-- Updated `Anvil` to `2.5.0-beta09`
-- Better support for incremental compilation using new `GeneratedFilesWithSources` API from `Anvil`
-- Split `:samples` module to multi-module structure showcasing usage of KSP and non-KSP code generators. See `Module structure in the project` section in README.md for more details.
-- Updated `README.md` with explanation on how to use KSP code generators.
 
 ### Deprecated
 
@@ -22,6 +17,17 @@
 ### Custom Code Generator
 
 ### Other Notes & Contributions
+
+## [0.2.0-beta01] - 2024-05-25
+
+### Added
+- Support Anvil KSP mode
+
+### Changed
+- Updated `Anvil` to `2.5.0-beta09`
+- Better support for incremental compilation using new `GeneratedFilesWithSources` API from `Anvil`
+- Split `:samples` module to multi-module structure showcasing usage of KSP and non-KSP code generators. See `Module structure in the project` section in README.md for more details.
+- Updated `README.md` with explanation on how to use KSP code generators.
 
 ## [0.1.0] - 2024-03-21
 
