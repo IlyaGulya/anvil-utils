@@ -1,10 +1,8 @@
 import com.google.auto.service.AutoService
-import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.anvil.compiler.api.AnvilContext
 import com.squareup.anvil.compiler.api.CodeGenerator
 import com.squareup.anvil.compiler.api.GeneratedFileWithSources
 import com.squareup.anvil.compiler.api.createGeneratedFile
-import com.squareup.anvil.compiler.internal.buildFile
 import com.squareup.anvil.compiler.internal.fqName
 import com.squareup.anvil.compiler.internal.reference.AnnotatedReference
 import com.squareup.anvil.compiler.internal.reference.AnnotationReference
@@ -17,21 +15,16 @@ import com.squareup.anvil.compiler.internal.reference.MemberFunctionReference
 import com.squareup.anvil.compiler.internal.reference.ParameterReference
 import com.squareup.anvil.compiler.internal.reference.argumentAt
 import com.squareup.anvil.compiler.internal.reference.asClassName
-import com.squareup.anvil.compiler.internal.reference.asTypeName
 import com.squareup.anvil.compiler.internal.reference.classAndInnerClassReferences
-import com.squareup.kotlinpoet.AnnotationSpec
-import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.ParameterSpec
-import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.TypeSpec
 import dagger.assisted.Assisted
-import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import me.gulya.anvil.assisted.AssistedKey
 import me.gulya.anvil.assisted.ContributesAssistedFactory
+import me.gulya.anvil.utils.BoundType
+import me.gulya.anvil.utils.FactoryMethod
+import me.gulya.anvil.utils.FactoryMethodParameter
 import me.gulya.anvil.utils.ParameterKey
+import me.gulya.anvil.utils.createAssistedFactory
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.psi.KtFile
 import java.io.File
@@ -56,76 +49,47 @@ class ContributesAssistedFactoryCodeGenerator : CodeGenerator {
     }
 
     private fun generateAssistedFactory(
-        assistedFactoryClass: ClassReference,
+        annotatedClass: ClassReference,
         codeGenDir: File,
     ): GeneratedFileWithSources {
-        val generatedPackage = assistedFactoryClass.packageFqName.toString()
-        val factoryClassName = "${assistedFactoryClass.shortName}_AssistedFactory"
-
-        val annotation = assistedFactoryClass.annotations
-            .single { it.fqName == contributesAssistedFactoryFqName }
-        val scope =
-            annotation
-                .scope()
-                .asClassName()
+        val annotation = annotatedClass.annotations.single {
+            it.fqName == contributesAssistedFactoryFqName
+        }
 
         val generationDetails = ContributesAssistedFactoryValidator(
             annotation = annotation,
-            assistedFactoryClass = assistedFactoryClass
+            assistedFactoryClass = annotatedClass
         ).validate()
 
-        val boundType = generationDetails.boundType
-        val boundTypeName = boundType.asTypeName()
-        val typeBuilder =
-            if (boundType.isInterface()) {
-                TypeSpec
-                    .interfaceBuilder(factoryClassName)
-                    .addSuperinterface(boundTypeName)
-            } else {
-                TypeSpec
-                    .classBuilder(factoryClassName)
-                    .addModifiers(KModifier.ABSTRACT)
-                    .superclass(boundTypeName)
-            }
+        val factory = createAssistedFactory(
+            annotatedName = annotatedClass.asClassName(),
+            boundType = generationDetails.boundType.run {
+                BoundType(
+                    name = asClassName(),
+                    isInterface = isInterface(),
+                )
+            },
+            scope = annotation.scope().asClassName(),
+            factoryMethod = generationDetails.factoryMethod.run {
+                FactoryMethod(
+                    name = name,
+                    parameters = parameters.map { parameter ->
+                        FactoryMethodParameter(
+                            type = parameter.type().asTypeName(),
+                            name = parameter.name,
+                            assistedKeyValue = parameter.assistedKeyValue(),
+                        )
+                    }
+                )
+            },
+        )
 
-        val content = FileSpec.buildFile(generatedPackage, factoryClassName) {
-            addType(
-                typeBuilder
-                    .addAnnotation(
-                        AnnotationSpec
-                            .builder(ContributesBinding::class)
-                            .addClassMember(scope)
-                            .addClassMember(boundTypeName)
-                            .build(),
-                    )
-                    .addAnnotation(AssistedFactory::class)
-                    .addFunction(
-                        FunSpec
-                            .builder(generationDetails.factoryMethod.name)
-                            .addModifiers(KModifier.OVERRIDE, KModifier.ABSTRACT)
-                            .apply {
-                                generationDetails.factoryMethod.parameters.forEach { parameter ->
-                                    val type = parameter.type().asTypeName()
-                                    addParameter(
-                                        ParameterSpec
-                                            .builder(parameter.name, type)
-                                            .assisted(parameter.assistedKeyValue())
-                                            .build(),
-                                    )
-                                }
-                            }
-                            .returns(assistedFactoryClass.asClassName())
-                            .build(),
-                    )
-                    .build(),
-            )
-        }
         return createGeneratedFile(
             codeGenDir = codeGenDir,
-            packageName = generatedPackage,
-            fileName = factoryClassName,
-            content = content,
-            sourceFile = assistedFactoryClass.containingFileAsJavaFile,
+            packageName = factory.packageName,
+            fileName = factory.name,
+            content = factory.spec.toString(),
+            sourceFile = annotatedClass.containingFileAsJavaFile,
         )
     }
 
@@ -220,26 +184,6 @@ internal data class KspGenerationDetails(
     val factoryMethod: MemberFunctionReference,
     val factoryParameters: Map<ParameterKey, ParameterReference>,
 )
-
-private fun AnnotationSpec.Builder.addClassMember(
-    member: TypeName,
-): AnnotationSpec.Builder {
-    addMember("%T::class", member)
-    return this
-}
-
-private fun ParameterSpec.Builder.assisted(value: String?): ParameterSpec.Builder {
-    if (value == null) return this
-    addAnnotation(
-        AnnotationSpec
-            .builder(Assisted::class)
-            .apply {
-                addMember("%S", value)
-            }
-            .build(),
-    )
-    return this
-}
 
 private fun ParameterReference.asParameterKey(keyFactory: (ParameterReference) -> String?): ParameterKey {
     return ParameterKey(type().asTypeName(), keyFactory(this))

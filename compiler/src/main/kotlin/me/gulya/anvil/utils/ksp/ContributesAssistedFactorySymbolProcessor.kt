@@ -17,30 +17,26 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
 import com.google.devtools.ksp.symbol.KSValueParameter
-import com.squareup.anvil.annotations.ContributesBinding
-import com.squareup.anvil.compiler.internal.createAnvilSpec
-import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.FunSpec
-import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.ParameterSpec
-import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 import dagger.assisted.Assisted
-import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import me.gulya.anvil.assisted.AssistedKey
 import me.gulya.anvil.assisted.ContributesAssistedFactory
+import me.gulya.anvil.utils.BoundType
+import me.gulya.anvil.utils.FactoryMethod
+import me.gulya.anvil.utils.FactoryMethodParameter
 import me.gulya.anvil.utils.ParameterKey
+import me.gulya.anvil.utils.createAssistedFactory
 import me.gulya.anvil.utils.ksp.internal.ErrorLoggingSymbolProcessor
 import me.gulya.anvil.utils.ksp.internal.SymbolProcessingException
 
 private val contributesAssistedFactoryFqName = ContributesAssistedFactory::class.asClassName()
 
+@Suppress("unused")
 @AutoService(SymbolProcessorProvider::class)
 class Provider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
@@ -65,70 +61,40 @@ internal class ContributesAssistedFactorySymbolProcessor(
     }
 
     private fun generateAssistedFactory(
-        assistedFactoryClass: KSClassDeclaration,
+        annotatedClass: KSClassDeclaration,
     ): FileSpec {
-        val generatedPackage = assistedFactoryClass.packageName.asString()
-        val factoryClassName = "${assistedFactoryClass.simpleName.asString()}_AssistedFactory"
-
-        val annotation = assistedFactoryClass.annotations
-            .single { it.annotationType.resolve().toClassName() == contributesAssistedFactoryFqName }
-        val scope =
-            annotation
-                .scope()
-                .toClassName()
+        val annotation = annotatedClass.annotations.single {
+            it.annotationType.resolve().toClassName() == contributesAssistedFactoryFqName
+        }
 
         val generationDetails = ContributesAssistedFactoryValidator(
             annotation = annotation,
-            assistedFactoryClass = assistedFactoryClass
+            assistedFactoryClass = annotatedClass
         ).validate()
 
-        val boundType = generationDetails.boundType
-        val boundTypeName = boundType.toClassName()
-        val typeBuilder =
-            if (boundType.classKind == ClassKind.INTERFACE) {
-                TypeSpec
-                    .interfaceBuilder(factoryClassName)
-                    .addSuperinterface(boundTypeName)
-            } else {
-                TypeSpec
-                    .classBuilder(factoryClassName)
-                    .addModifiers(KModifier.ABSTRACT)
-                    .superclass(boundTypeName)
-            }
-
-        val content = FileSpec.createAnvilSpec(generatedPackage, factoryClassName) {
-            addType(
-                typeBuilder
-                    .addAnnotation(
-                        AnnotationSpec
-                            .builder(ContributesBinding::class)
-                            .addClassMember(scope)
-                            .addClassMember(boundTypeName)
-                            .build(),
-                    )
-                    .addAnnotation(AssistedFactory::class)
-                    .addFunction(
-                        FunSpec
-                            .builder(generationDetails.factoryMethod.simpleName.asString())
-                            .addModifiers(KModifier.OVERRIDE, KModifier.ABSTRACT)
-                            .apply {
-                                generationDetails.factoryMethod.parameters.forEach { parameter ->
-                                    val type = parameter.type.toTypeName()
-                                    addParameter(
-                                        ParameterSpec
-                                            .builder(parameter.name!!.asString(), type)
-                                            .assisted(parameter.assistedKeyValue())
-                                            .build(),
-                                    )
-                                }
-                            }
-                            .returns(assistedFactoryClass.toClassName())
-                            .build(),
-                    )
-                    .build(),
-            )
-        }
-        return content
+        val factory = createAssistedFactory(
+            annotatedName = annotatedClass.toClassName(),
+            boundType = generationDetails.boundType.run {
+                BoundType(
+                    name = toClassName(),
+                    isInterface = classKind == ClassKind.INTERFACE,
+                )
+            },
+            scope = annotation.scope().toClassName(),
+            factoryMethod = generationDetails.factoryMethod.run {
+                FactoryMethod(
+                    name = simpleName.asString(),
+                    parameters = parameters.map { parameter ->
+                        FactoryMethodParameter(
+                            type = parameter.type.toTypeName(),
+                            name = parameter.name!!.asString(),
+                            assistedKeyValue = parameter.assistedKeyValue(),
+                        )
+                    }
+                )
+            },
+        )
+        return factory.spec
     }
 
     internal class ContributesAssistedFactoryValidator(
@@ -188,7 +154,6 @@ internal class ContributesAssistedFactorySymbolProcessor(
             val constructorParameters = primaryConstructor.parameters
                 .filter { it.isAnnotationPresent(Assisted::class) }
                 .associateBy { ParameterKey(it.type.resolve().toTypeName(), it.assistedValue()) }
-//                .associateBy { ParameterKey(it.type.toTypeName(), it.assistedValue()) }
 
             if (constructorParameters.size != factoryMethodParameters.size) {
                 throw SymbolProcessingException(
@@ -241,26 +206,6 @@ internal data class GenerationDetails(
     val factoryMethod: KSFunctionDeclaration,
     val factoryParameters: Map<ParameterKey, KSValueParameter>,
 )
-
-private fun AnnotationSpec.Builder.addClassMember(
-    member: TypeName,
-): AnnotationSpec.Builder {
-    addMember("%T::class", member)
-    return this
-}
-
-private fun ParameterSpec.Builder.assisted(value: String?): ParameterSpec.Builder {
-    if (value == null) return this
-    addAnnotation(
-        AnnotationSpec
-            .builder(Assisted::class)
-            .apply {
-                addMember("%S", value)
-            }
-            .build(),
-    )
-    return this
-}
 
 private fun KSValueParameter.asParameterKey(keyFactory: (KSValueParameter) -> String?): ParameterKey {
     return ParameterKey(type.toTypeName(), keyFactory(this))
