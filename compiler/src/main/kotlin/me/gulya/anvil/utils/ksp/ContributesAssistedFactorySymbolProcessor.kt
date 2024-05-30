@@ -52,7 +52,6 @@ internal class ContributesAssistedFactorySymbolProcessor(
     }
 
     override fun processChecked(resolver: Resolver): List<KSAnnotated> {
-        env.logger.warn("!!!processing assisted factories!!!")
         resolver.getSymbolsWithAnnotation(contributesAssistedFactoryFqName.reflectionName())
             .filterIsInstance<KSClassDeclaration>()
             .forEach { annotated ->
