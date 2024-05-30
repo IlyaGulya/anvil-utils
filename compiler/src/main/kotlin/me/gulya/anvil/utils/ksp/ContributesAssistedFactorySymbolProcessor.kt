@@ -1,3 +1,5 @@
+package me.gulya.anvil.utils.ksp
+
 import com.google.auto.service.AutoService
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getConstructors

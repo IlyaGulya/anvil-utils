@@ -1,3 +1,5 @@
+package me.gulya.anvil.utils.embedded
+
 import com.google.auto.service.AutoService
 import com.squareup.anvil.compiler.api.AnvilContext
 import com.squareup.anvil.compiler.api.CodeGenerator
