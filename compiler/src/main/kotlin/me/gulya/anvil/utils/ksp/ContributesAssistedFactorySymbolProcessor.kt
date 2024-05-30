@@ -47,12 +47,12 @@ internal class ContributesAssistedFactorySymbolProcessor(
     @AutoService(SymbolProcessorProvider::class)
     class Provider : SymbolProcessorProvider {
         override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
-            environment.logger.warn("!!!creating assisted factory processor!!!")
             return ContributesAssistedFactorySymbolProcessor(environment)
         }
     }
 
     override fun processChecked(resolver: Resolver): List<KSAnnotated> {
+        env.logger.warn("!!!processing assisted factories!!!")
         resolver.getSymbolsWithAnnotation(contributesAssistedFactoryFqName.reflectionName())
             .filterIsInstance<KSClassDeclaration>()
             .forEach { annotated ->
