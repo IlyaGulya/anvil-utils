@@ -37,17 +37,18 @@ import me.gulya.anvil.utils.ksp.internal.SymbolProcessingException
 private val contributesAssistedFactoryFqName = ContributesAssistedFactory::class.asClassName()
 
 @Suppress("unused")
-@AutoService(SymbolProcessorProvider::class)
-class Provider : SymbolProcessorProvider {
-    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
-        return ContributesAssistedFactorySymbolProcessor(environment)
-    }
-}
-
-@Suppress("unused")
 internal class ContributesAssistedFactorySymbolProcessor(
     override val env: SymbolProcessorEnvironment,
 ) : ErrorLoggingSymbolProcessor() {
+
+    @Suppress("unused")
+    @AutoService(SymbolProcessorProvider::class)
+    class Provider : SymbolProcessorProvider {
+        override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
+            environment.logger.warn("!!!creating assisted factory processor!!!")
+            return ContributesAssistedFactorySymbolProcessor(environment)
+        }
+    }
 
     override fun processChecked(resolver: Resolver): List<KSAnnotated> {
         resolver.getSymbolsWithAnnotation(contributesAssistedFactoryFqName.reflectionName())
