@@ -16,6 +16,7 @@ kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 google-autoservice-annotations = "com.google.auto.service:auto-service-annotations:1.1.1"
 google-autoservice-compiler = "com.google.auto.service:auto-service:1.1.1"
+google-autoservice-ksp = "dev.zacsweers.autoservice:auto-service-ksp:1.1.0"
 
 dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }
 dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }

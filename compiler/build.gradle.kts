@@ -1,6 +1,7 @@
 plugins {
     id("conventions.library")
     id("conventions.publish")
+    alias(libs.plugins.ksp)
 }
 
 publish {
@@ -23,8 +24,8 @@ dependencies {
 
     implementation(libs.ksp.api)
 
-    compileOnly(libs.google.autoservice.annotations)
-    kapt(libs.google.autoservice.compiler)
+    implementation(libs.google.autoservice.annotations)
+    ksp(libs.google.autoservice.ksp)
 
     testImplementation(libs.junit)
     testImplementation(testFixtures(libs.anvil.compiler.utils))
