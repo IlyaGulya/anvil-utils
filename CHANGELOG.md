@@ -18,6 +18,12 @@
 
 ### Other Notes & Contributions
 
+## [0.2.0-beta02] - 2024-05-30
+
+### Changed
+- Refactored code generator to be common between KSP and non-KSP implementations
+- Made KSP processor a nested class and moved to proper package to prevent possible conflicts with another KSP processors.
+
 ## [0.2.0-beta01] - 2024-05-25
 
 ### Added
