@@ -18,6 +18,12 @@
 
 ### Other Notes & Contributions
 
+## [0.2.1-beta01] - 2024-07-22
+
+### Fixed
+
+- Fixed lambda type resolving in KSP processor [\#2](https://github.com/IlyaGulya/anvil-utils/issues/2)
+
 ## [0.2.0-beta02] - 2024-05-30
 
 ### Changed
