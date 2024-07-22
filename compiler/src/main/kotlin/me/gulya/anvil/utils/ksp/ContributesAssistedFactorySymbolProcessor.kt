@@ -210,7 +210,7 @@ internal data class GenerationDetails(
 )
 
 private fun KSValueParameter.asParameterKey(keyFactory: (KSValueParameter) -> String?): ParameterKey {
-    return ParameterKey(type.toTypeName(), keyFactory(this))
+    return ParameterKey(type.resolve().toTypeName(), keyFactory(this))
 }
 
 private fun KSValueParameter.assistedValue(): String? {

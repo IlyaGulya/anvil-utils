@@ -562,6 +562,36 @@ class ContributesAssistedFactoryCodeGeneratorTest(
             }
         }
     }
+
+    @Test
+    fun `should not fail on multiple lambda types`() {
+        compileAnvil("""
+            @file:Suppress("UNUSED_PARAMETER")
+            package com.test 
+            
+            import dagger.assisted.AssistedInject
+            import dagger.assisted.Assisted
+            import me.gulya.anvil.assisted.ContributesAssistedFactory
+            import me.gulya.anvil.assisted.AssistedKey
+            
+            interface TestApi
+            
+            interface TestApiFactory {
+                fun create(
+                    onBackClicked: () -> Unit,
+                    onCategoryClicked: (categoryId: Long) -> Unit,
+                ): TestApi
+            }
+            
+            @ContributesAssistedFactory(Any::class, TestApiFactory::class)
+            class DefaultTestApi @AssistedInject constructor(
+                @Assisted private val onBackClicked: () -> Unit,
+                @Assisted private val onCategoryClicked: (categoryId: Long) -> Unit,
+            ) : TestApi
+        """.trimIndent()) {
+            assertThat(exitCode).isEqualTo(OK)
+        }
+    }
 }
 
 inline fun <reified T> AnnotatedElement.annotationOrNull(): T? =
