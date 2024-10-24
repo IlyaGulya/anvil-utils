@@ -18,6 +18,18 @@
 
 ### Other Notes & Contributions
 
+## [0.3.0-beta01] - 2024-05-30
+
+### Changed
+- Migrated from `com.squareup.anvil` to `dev.zacsweers.anvil` plugin.
+- Upgrade kotlin from `2.0.0` to `2.0.21`
+- Upgrade KSP from `2.0.0-1.0.21` to `2.0.21-1.0.25`
+- Upgrade Dagger from `2.51.1` to `2.52`
+- Upgrade kotlinx binary compatibility checker from `0.14.0` to `0.16.3`
+- Upgrade vanniktech maven publish plugin from `0.28.0` to `0.30.0`
+- Upgrade Kotlinpoet from `1.17.0` to `2.0.0`
+- Upgrade Gradle from `8.7` to `8.10.2`
+
 ## [0.2.1-beta01] - 2024-07-22
 
 ### Fixed

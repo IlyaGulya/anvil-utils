@@ -23,7 +23,9 @@ open class PublishConventionPlugin : Plugin<Project> {
 
         @Suppress("UnstableApiUsage")
         mavenPublishing.pomFromGradleProperties()
-        mavenPublishing.signAllPublications()
+        if (!target.gradle.startParameter.taskNames.any { it.contains("publishToMavenLocal") }) {
+            mavenPublishing.signAllPublications()
+        }
         mavenPublishing.publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
 
         target.plugins.withId("org.jetbrains.kotlin.jvm") {
