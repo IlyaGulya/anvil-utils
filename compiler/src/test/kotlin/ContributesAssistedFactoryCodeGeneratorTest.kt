@@ -592,6 +592,31 @@ class ContributesAssistedFactoryCodeGeneratorTest(
             assertThat(exitCode).isEqualTo(OK)
         }
     }
+
+    @Test
+    fun `should fail when bound type is not provided`() {
+        compileAnvil(
+            """
+        package com.test
+        
+        import dagger.assisted.AssistedInject
+        import dagger.assisted.Assisted
+        import me.gulya.anvil.assisted.ContributesAssistedFactory
+        
+        interface TestApi
+        
+        @ContributesAssistedFactory(Any::class)  // Missing boundType
+        class DefaultTestApi @AssistedInject constructor(
+            @Assisted param: String
+        ) : TestApi
+        """
+        ) {
+            assertThat(exitCode).isEqualTo(COMPILATION_ERROR)
+            assertThat(messages).contains(
+                "The @ContributesAssistedFactory annotation on class 'DefaultTestApi' must have a 'boundType' parameter"
+            )
+        }
+    }
 }
 
 inline fun <reified T> AnnotatedElement.annotationOrNull(): T? =
