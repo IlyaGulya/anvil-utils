@@ -18,6 +18,10 @@
 
 ### Other Notes & Contributions
 
+## [0.2.1] - 2024-11-19
+
+Stable release of latest version supporting Square Anvil plugin
+
 ## [0.2.1-beta01] - 2024-07-22
 
 ### Fixed
