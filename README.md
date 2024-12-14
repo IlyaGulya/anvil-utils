@@ -10,11 +10,11 @@ Dagger and Square Anvil.
 
 ## Compatibility Map
 
-| Anvil Utils Version | Anvil Version | Plugin ID             |
-|---------------------|---------------|----------------------|
-| 0.1.0               | 2.4.2         | com.squareup.anvil   |
-| 0.2.0-beta01        | 2.5.0-beta09  | com.squareup.anvil   |
-| 0.3.0-beta01        | 0.3.3         | dev.zacsweers.anvil  |
+| Anvil Utils Version    | Anvil Version   | Plugin ID             |
+|------------------------|-----------------|----------------------|
+| 0.1.0                  | 2.4.2           | com.squareup.anvil   |
+| 0.2.0-beta01           | 2.5.0-beta09    | com.squareup.anvil   |
+| 0.3.0-beta02 and later | 0.3.3 and later | dev.zacsweers.anvil  |
 
 ## Getting Started
 
@@ -33,8 +33,8 @@ Dagger and Square Anvil.
 4. Add the following dependencies to your project:
     ```kotlin
     dependencies {
-        implementation("me.gulya.anvil:annotations:0.3.0-beta01")
-        ksp("me.gulya.anvil:compiler:0.3.0-beta01")
+        implementation("me.gulya.anvil:annotations:0.3.0-beta02")
+        ksp("me.gulya.anvil:compiler:0.3.0-beta02")
     }
     ```
 
