@@ -25,3 +25,5 @@ include(":samples:library:impl:ksp")
 include(":samples:library:impl:embedded")
 include(":samples:entrypoint:embedded")
 include(":samples:entrypoint:ksp")
+
+//includeBuild("compiler/src/main/fixtures/ksp-multi-round")

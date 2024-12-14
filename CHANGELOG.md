@@ -6,11 +6,15 @@
 
 ### Changed
 
+- Upgraded Dagger to `2.53.1`
+
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Correctly defer symbols with unresolved references to the next KSP round (fixes [Issue #4](https://github.com/IlyaGulya/anvil-utils/issues/4))
 
 ### Security
 

@@ -1,3 +1,5 @@
+package me.gulya.anvil
+
 import com.google.common.truth.Truth.assertThat
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.anvil.compiler.internal.testing.AnvilCompilationMode
@@ -527,7 +529,7 @@ class ContributesAssistedFactoryCodeGeneratorTest(
         compileAnvil(
             """
         @file:Suppress("UNUSED_PARAMETER")
-        package com.test
+        package com.test 
         
         import me.gulya.anvil.assisted.AssistedKey
         
