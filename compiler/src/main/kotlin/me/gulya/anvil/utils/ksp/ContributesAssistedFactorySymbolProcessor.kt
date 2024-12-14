@@ -1,5 +1,6 @@
 package me.gulya.anvil.utils.ksp
 
+import Errors
 import com.google.auto.service.AutoService
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getConstructors
@@ -51,15 +52,33 @@ internal class ContributesAssistedFactorySymbolProcessor(
         }
     }
 
+    // Track processed declarations to avoid duplicate generation
+    private val processedDeclarations = mutableSetOf<String>()
+
     override fun processChecked(resolver: Resolver): List<KSAnnotated> {
-        resolver.getSymbolsWithAnnotation(contributesAssistedFactoryFqName.reflectionName())
+        val symbols = resolver.getSymbolsWithAnnotation(contributesAssistedFactoryFqName.reflectionName())
             .filterIsInstance<KSClassDeclaration>()
-            .forEach { annotated ->
-                generateAssistedFactory(annotated)
-                    .writeTo(env.codeGenerator, Dependencies(false, annotated.containingFile!!))
+            .filterNot { it.qualifiedName?.asString() in processedDeclarations }
+            .toList()
+
+        val deferredSymbols = mutableListOf<KSAnnotated>()
+
+        symbols.forEach { annotated ->
+            if (!annotated.isProcessable()) {
+                deferredSymbols.add(annotated)
+                return@forEach
             }
 
-        return emptyList()
+            val dependencies = annotated.containingFile?.let { listOf(it) } ?: emptyList()
+            generateAssistedFactory(annotated)
+                .writeTo(
+                    env.codeGenerator,
+                    Dependencies(aggregating = true, sources = dependencies.toTypedArray())
+                )
+            processedDeclarations.add(annotated.qualifiedName?.asString() ?: return@forEach)
+        }
+
+        return deferredSymbols
     }
 
     private fun generateAssistedFactory(
@@ -200,6 +219,59 @@ internal class ContributesAssistedFactorySymbolProcessor(
                 factoryParameters = constructorParameters,
             )
         }
+    }
+
+    private fun KSClassDeclaration.isProcessable(): Boolean {
+        return try {
+            val unresolvedTypes = mutableListOf<String>()
+
+            // Check constructor parameters
+            primaryConstructor?.parameters?.forEach { param ->
+                if (!param.type.resolve().isResolvable()) {
+                    unresolvedTypes.add("constructor parameter ${param.name?.asString()}: ${param.type}")
+                }
+            }
+
+            // Check annotation types
+            annotations.firstOrNull {
+                it.annotationType.resolve().toClassName() == contributesAssistedFactoryFqName
+            }?.let { annotation ->
+                // Check scope type
+                annotation.scopeOrNull()?.let {
+                    if (!it.isResolvable()) {
+                        unresolvedTypes.add("scope type: $it")
+                    }
+                }
+
+                // Check bound type
+                annotation.boundTypeOrNull()?.let {
+                    if (!it.isResolvable()) {
+                        unresolvedTypes.add("bound type: $it")
+                    }
+                }
+            }
+
+            // Check supertype
+            superTypes.forEach { superType ->
+                if (!superType.resolve().isResolvable()) {
+                    unresolvedTypes.add("supertype: $superType")
+                }
+            }
+
+            if (unresolvedTypes.isNotEmpty()) {
+                env.logger.info("Deferring processing of ${simpleName.asString()}: unresolved types: $unresolvedTypes")
+                false
+            } else {
+                true
+            }
+        } catch (e: Exception) {
+            env.logger.info("Deferring processing of ${simpleName.asString()}: ${e.message}")
+            false
+        }
+    }
+
+    private fun KSType.isResolvable(): Boolean {
+        return !isError && declaration.qualifiedName != null
     }
 }
 

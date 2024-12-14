@@ -2,7 +2,7 @@
 kotlin = "2.0.21"
 anvil = "0.3.3"
 ksp = "2.0.21-1.0.25"
-dagger = "2.52"
+dagger = "2.53.1"
 kotlinx-binaryCompatibility = "0.16.3"
 dropbox-dependencyGuard = "0.5.0"
 mavenPublish = "0.30.0"
@@ -15,11 +15,13 @@ anvil-compiler-utils = { module = "dev.zacsweers.anvil:compiler-utils", version.
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 google-autoservice-annotations = "com.google.auto.service:auto-service-annotations:1.1.1"
-google-autoservice-compiler = "com.google.auto.service:auto-service:1.1.1"
 google-autoservice-ksp = "dev.zacsweers.autoservice:auto-service-ksp:1.1.0"
 
 dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }
 dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }
+
+anvil-utils-annotations = { module = "me.gulya.anvil:annotations" }
+anvil-utils-compiler = { module = "me.gulya.anvil:compiler" }
 
 google-truth = "com.google.truth:truth:1.4.2"
 junit = "junit:junit:4.13.2"

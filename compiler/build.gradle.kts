@@ -12,6 +12,12 @@ publish {
     )
 }
 
+tasks.withType<Test> {
+    testLogging {
+        events("passed", "skipped", "failed", "standardOut", "standardError")
+    }
+}
+
 dependencies {
     implementation(projects.annotations)
 
@@ -30,4 +36,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(testFixtures(libs.anvil.compiler.utils))
     testImplementation(libs.google.truth)
+
+    testImplementation(gradleTestKit())
+    testImplementation(kotlin("test"))
 }
