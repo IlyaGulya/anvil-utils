@@ -11,11 +11,10 @@ anvil {
 }
 
 dependencies {
-    implementation(projects.processorApi)
     implementation(projects.di)
+    implementation(projects.library.api)
     implementation(libs.anvil.utils.annotations)
     implementation(libs.dagger)
 
-    ksp(projects.processor)
     ksp(libs.anvil.utils.compiler)
 }
