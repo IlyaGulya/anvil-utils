@@ -33,8 +33,8 @@ Dagger and Square Anvil.
 4. Add the following dependencies to your project:
     ```kotlin
     dependencies {
-        implementation("me.gulya.anvil:annotations:0.3.0-beta02")
-        ksp("me.gulya.anvil:compiler:0.3.0-beta02")
+        implementation("me.gulya.anvil:annotations:0.3.0-beta03")
+        ksp("me.gulya.anvil:compiler:0.3.0-beta03")
     }
     ```
 
