@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- Add workaround for KSP bug which leads to multiple instances of the same symbol in the same round https://github.com/google/ksp/issues/1993 (fixes [Issue #4](https://github.com/IlyaGulya/anvil-utils/issues/4))
+
 ### Security
 
 ### Custom Code Generator
