@@ -14,8 +14,7 @@ anvil {
 dependencies {
     implementation(projects.processorApi)
     implementation(projects.di)
-    implementation(projects.library.api)
-    implementation(projects.library.impl)
+    implementation(projects.library)
     implementation(libs.anvil.utils.annotations)
     implementation(libs.dagger)
 

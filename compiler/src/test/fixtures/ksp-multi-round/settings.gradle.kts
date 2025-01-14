@@ -22,8 +22,7 @@ dependencyResolutionManagement {
 
 include(":processor")
 include(":processor-api")
-include(":library:api")
-include(":library:impl")
+include(":library")
 include(":di")
 include(":app")
 

@@ -6,5 +6,6 @@ import me.gulya.anvil.assisted.ContributesAssistedFactory
 
 @ContributesAssistedFactory(SampleScope::class, SampleComponent.Factory::class)
 class DefaultSampleComponent @AssistedInject constructor(
-    @Assisted val generated: SampleComponentGenerated // This depends on the generated class
+    val generated: SampleComponentGenerated, // This depends on the generated class
+    @Assisted val string: String,
 ) : SampleComponent

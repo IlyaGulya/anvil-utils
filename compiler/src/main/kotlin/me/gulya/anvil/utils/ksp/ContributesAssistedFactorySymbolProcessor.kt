@@ -59,7 +59,12 @@ internal class ContributesAssistedFactorySymbolProcessor(
         val symbols = resolver.getSymbolsWithAnnotation(contributesAssistedFactoryFqName.reflectionName())
             .filterIsInstance<KSClassDeclaration>()
             .filterNot { it.qualifiedName?.asString() in processedDeclarations }
-            .toList()
+            // Classes keep being processed multiple times and throw a FileAlreadyExistsException in multi round
+            // scenarios. The function above getSymbolsWithAnnotation() returns deferred symbols twice for some
+            // reason in the next round.
+            //
+            // https://github.com/google/ksp/issues/1993
+            .distinctBy { it.qualifiedName }
 
         val deferredSymbols = mutableListOf<KSAnnotated>()
 

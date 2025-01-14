@@ -8,13 +8,16 @@ anvil {
     useKsp(
         contributesAndFactoryGeneration = true,
     )
+    generateDaggerFactories = true
 }
 
 dependencies {
+    implementation(projects.processorApi)
+
     implementation(projects.di)
-    implementation(projects.library.api)
     implementation(libs.anvil.utils.annotations)
     implementation(libs.dagger)
 
     ksp(libs.anvil.utils.compiler)
+    ksp(projects.processor)
 }

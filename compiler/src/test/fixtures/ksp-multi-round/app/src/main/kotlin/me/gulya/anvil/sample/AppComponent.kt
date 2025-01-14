@@ -9,5 +9,5 @@ interface AppComponent {
 
 fun main() {
     val component = DaggerAppComponent.create()
-    val instance = component.factory(SampleComponentGenerated())
+    val instance = component.factory("")
 }
