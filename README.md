@@ -15,6 +15,7 @@ Dagger and Square Anvil.
 | 0.1.0                  | 2.4.2           | com.squareup.anvil   |
 | 0.2.0-beta01           | 2.5.0-beta09    | com.squareup.anvil   |
 | 0.3.0-beta02 and later | 0.3.3 and later | dev.zacsweers.anvil  |
+| 0.4.0 and later        | 0.4.1 and later | dev.zacsweers.anvil  |
 
 ## Getting Started
 
@@ -22,7 +23,7 @@ Dagger and Square Anvil.
 
 1. Follow Zac Sweer's [guide](https://www.zacsweers.dev/preparing-for-k2/#anvil) on how to prepare your project for
    Anvil with KSP and K2.
-2. Ensure you have at least `0.3.3` version of Zac Sweer's Anvil in your project.
+2. Ensure you have at least `0.4.1` version of Zac Sweer's Anvil in your project.
 3. Ensure you have `ksp` plugin applied to your project:
     ```kotlin
     plugins {
@@ -33,15 +34,15 @@ Dagger and Square Anvil.
 4. Add the following dependencies to your project:
     ```kotlin
     dependencies {
-        implementation("me.gulya.anvil:annotations:0.3.0-beta03")
-        ksp("me.gulya.anvil:compiler:0.3.0-beta03")
+        implementation("me.gulya.anvil:annotations:0.4.0")
+        ksp("me.gulya.anvil:compiler:0.4.0")
     }
     ```
 
 5. Enable Anvil in your project by applying the Anvil Gradle plugin:
     ```kotlin
     plugins {
-        id("dev.zacsweers.anvil") version "0.3.3"
+        id("dev.zacsweers.anvil") version "0.4.1"
     }
     ```
 
@@ -67,7 +68,7 @@ Dagger and Square Anvil.
 2. Enable Anvil in your project by applying the Anvil Gradle plugin:
     ```kotlin
     plugins {
-        id("dev.zacsweers.anvil") version "0.3.3"
+        id("dev.zacsweers.anvil") version "0.4.1"
     }
     ```
 

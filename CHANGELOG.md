@@ -18,6 +18,15 @@
 
 ### Other Notes & Contributions
 
+## [0.4.0] - 2025-08-08
+
+### Changed
+
+- Upgraded Kotlin from `2.0.21` to `2.1.21`
+- Upgraded Anvil from `0.3.3` to `0.4.1`
+- Upgraded KSP from `2.0.21-1.0.25` to `2.1.21-2.0.2`
+- Upgraded Dagger from `2.53.1` to `2.56.2`
+
 ## [0.3.0-beta03] - 2025-01-14
 
 ### Fixed
